@@ -104,7 +104,7 @@
                     continue;
                 }
                 if (line.startsWith('設定ボックス')) {
-                    if (currentBox && currentBox.id) {
+                    if (currentBox && (currentBox.id || currentBox.category === '説明文')) {
                         if (currentBox.category === '説明文') description = currentBox.defaultString || '';
                         else settingBoxes.push(currentBox);
                     }
@@ -134,6 +134,20 @@
                     break;
                 }
             }
+
+            // Store parsed settings in editedValues
+            editedValues.title = title;
+            editedValues.description = description;
+            settingBoxes.forEach(box => {
+                editedValues.settings[box.id] = {
+                    id: box.id,
+                    desc: box.desc,
+                    guid: box.defaultGuid,
+                    string: box.defaultString,
+                    int: box.defaultInteger,
+                    type: box.type
+                };
+            });
 
             return { title, description, settingBoxes, hasTemplate, eventName };
         }
@@ -188,7 +202,7 @@
                         if (!settingBoxes.some(box => box.id === lastComment.id)) {
                             const box = {
                                 id: lastComment.id,
-                                desc: '',
+                                desc: editedValues.settings[lastComment.id]?.desc || '',
                                 defaultGuid: '',
                                 defaultString: '',
                                 defaultInteger: '',
@@ -203,6 +217,12 @@
                                 }
                             }
                             settingBoxes.push(box);
+                            editedValues.settings[box.id] = {
+                                id: box.id,
+                                desc: box.desc,
+                                guid: box.defaultGuid,
+                                type: box.type
+                            };
                         }
                         // Update グラフィック field in the current sheet
                         for (let j = currentSheetStart; j < i && j >= 0; j++) {
@@ -218,7 +238,7 @@
                         if (!settingBoxes.some(box => box.id === lastComment.id)) {
                             const box = {
                                 id: lastComment.id,
-                                desc: '',
+                                desc: editedValues.settings[lastComment.id]?.desc || '',
                                 defaultGuid: '',
                                 defaultString: '',
                                 defaultInteger: '',
@@ -229,6 +249,11 @@
                                 box.defaultGuid = lines[i + 1].replace('Guid', '').trim();
                             }
                             settingBoxes.push(box);
+                            editedValues.settings[box.id] = {
+                                id: box.id,
+                                desc: box.desc,
+                                type: box.type
+                            };
                         }
                         if (i + 1 < lines.length && lines[i + 1].trim().startsWith('Guid')) {
                             modifiedLines[i + 1] = `\t\tGuid\t|Guid|${lastComment.id}|`;
@@ -240,7 +265,7 @@
                         if (!settingBoxes.some(box => box.id === lastComment.id)) {
                             const box = {
                                 id: lastComment.id,
-                                desc: '',
+                                desc: editedValues.settings[lastComment.id]?.desc || '',
                                 defaultGuid: '',
                                 defaultString: '',
                                 defaultInteger: '',
@@ -251,6 +276,12 @@
                                 box.defaultInteger = lines[i + 1].replace('整数', '').trim();
                             }
                             settingBoxes.push(box);
+                            editedValues.settings[box.id] = {
+                                id: box.id,
+                                desc: box.desc,
+                                int: box.defaultInteger,
+                                type: box.type
+                            };
                         }
                         if (i + 1 < lines.length && lines[i + 1].trim().startsWith('変数')) {
                             modifiedLines[i + 1] = `\t\t変数\t"|文字列|${lastComment.id}|"`;
@@ -261,13 +292,17 @@
                 }
             }
 
+            // Include description in generated template
             const generatedLines = [
                 `テンプレート定義\t${eventName}`,
+                `\t設定ボックス\t説明文`,
+                `\t\tデフォルト文字列\t${editedValues.description || ''}`,
+                `\t設定ボックス終了`,
                 ...(settingBoxes.length ? settingBoxes.map(box => [
                     `\t設定ボックス\t${box.category}`,
                     `\t\t設定ID\t${box.id}`,
                     `\t\t説明\t${box.desc}`,
-                    ...(box.defaultGuid ? [`\t\tデフォルトGuid\t${box.defaultGuid}`] : []),
+                    ...(box.defaultGuid && box.type !== 'ITEM' ? [`\t\tデフォルトGuid\t${box.defaultGuid}`] : []),
                     ...(box.defaultString ? [`\t\tデフォルト文字列\t${box.defaultString}`] : []),
                     ...(box.defaultInteger ? [`\t\tデフォルト整数\t${box.defaultInteger}`] : []),
                     `\t設定ボックス終了`
@@ -278,7 +313,7 @@
             return {
                 generatedTemplate: {
                     title: eventName,
-                    description: '',
+                    description: editedValues.description || '',
                     settingBoxes
                 },
                 modifiedLines: generatedLines
@@ -316,7 +351,7 @@
         // Render input based on type
         function renderInput(type, box) {
             let html = '';
-            if (['GRAPHICAL', 'FACIAL GRAPHICS', 'ITEM', 'MONSTER', 'BATTLE BACKGROUND'].includes(type)) {
+            if (['GRAPHICAL', 'FACIAL GRAPHICS', 'MONSTER', 'BATTLE BACKGROUND'].includes(type)) {
                 html += `<label for="guid-input-${box.id}">Edit GUID:</label><input type="text" id="guid-input-${box.id}" value="${box.defaultGuid || ''}" onchange="updateField('settings.${box.id}.guid', this.value)">`;
             }
             if (type === 'GRAPHICAL' && box.defaultString) {
@@ -350,133 +385,189 @@
                 return;
             }
 
-            const modifiedLines = [...originalLines];
-            const idMapping = {};
-            let inSettingBox = false, settingBoxLines = [], settingBoxStartIndex = 0;
+            try {
+                const modifiedLines = [...originalLines];
+                const idMapping = {};
+                let inSettingBox = false, settingBoxLines = [], settingBoxStartIndex = -1;
 
-            // Update setting boxes and track ID changes
-            for (let i = 0; i < modifiedLines.length; i++) {
-                let line = modifiedLines[i].trim();
-                if (line.startsWith('テンプレート定義') && !line.startsWith('テンプレート定義終了')) {
-                    if (editedValues.title) modifiedLines[i] = `テンプレート定義\t${editedValues.title}`;
-                    continue;
-                }
-                if (line.startsWith('設定ボックス')) {
-                    if (inSettingBox && settingBoxLines.length) {
-                        updateSettingBox(modifiedLines, settingBoxLines, settingBoxStartIndex, idMapping);
-                    }
-                    inSettingBox = true;
-                    settingBoxLines = [];
-                    settingBoxStartIndex = i;
-                }
-                if (inSettingBox) settingBoxLines.push(modifiedLines[i]);
-                if (line.startsWith('設定ボックス終了')) {
-                    updateSettingBox(modifiedLines, settingBoxLines, settingBoxStartIndex, idMapping);
-                    inSettingBox = false;
-                    settingBoxLines = [];
-                }
-            }
-
-            // Update script and sheet sections
-            let inScript = false, inSheet = false, lastComment = null, currentSheetStart = -1;
-            for (let i = 0; i < modifiedLines.length; i++) {
-                let line = modifiedLines[i].trim();
-                if (line.startsWith('シート')) {
-                    inSheet = true;
-                    currentSheetStart = i;
-                    continue;
-                }
-                if (line.startsWith('シート終了')) {
-                    inSheet = false;
-                    currentSheetStart = -1;
-                    continue;
-                }
-                if (line.startsWith('スクリプト')) {
-                    inScript = true;
-                    continue;
-                }
-                if (line.startsWith('スクリプト終了')) {
-                    inScript = false;
-                    lastComment = null;
-                    continue;
-                }
-                if (inScript && line.startsWith('コマンド\tCOMMENT')) {
-                    if (i + 1 < modifiedLines.length && modifiedLines[i + 1].trim().startsWith('文字列')) {
-                        const comment = modifiedLines[i + 1].replace('文字列', '').trim();
-                        if (comment.startsWith('G#') || comment.startsWith('#')) {
-                            lastComment = {
-                                id: comment.slice(comment.startsWith('G#') ? 2 : 1).split(/\s+/)[0],
-                                isGraphic: comment.startsWith('G#')
-                            };
-                            lastComment.id = idMapping[lastComment.id] || lastComment.id;
+                // Update existing setting boxes and track ID changes
+                for (let i = 0; i < modifiedLines.length; i++) {
+                    let line = modifiedLines[i].trim();
+                    if (line.startsWith('設定ボックス')) {
+                        if (inSettingBox && settingBoxLines.length) {
+                            updateSettingBox(modifiedLines, settingBoxLines, settingBoxStartIndex, idMapping);
                         }
+                        inSettingBox = true;
+                        settingBoxLines = [];
+                        settingBoxStartIndex = i;
                     }
-                    continue;
+                    if (inSettingBox) settingBoxLines.push(modifiedLines[i]);
+                    if (line.startsWith('設定ボックス終了')) {
+                        updateSettingBox(modifiedLines, settingBoxLines, settingBoxStartIndex, idMapping);
+                        inSettingBox = false;
+                        settingBoxLines = [];
+                    }
                 }
-                if (inScript && lastComment) {
-                    const commandLine = line.split(/\s+/).filter(part => part);
-                    const commandType = commandLine[1] || '';
-                    if (lastComment.isGraphic && inSheet) {
-                        // Update グラフィック field
-                        for (let j = currentSheetStart; j < i && j >= 0; j++) {
-                            if (modifiedLines[j].trim().startsWith('グラフィック')) {
-                                modifiedLines[j] = `\tグラフィック\t|Guid|${lastComment.id}|`;
-                                logDebug(`Updated グラフィック to |Guid|${lastComment.id}| at line ${j + 1}`);
-                                break;
+
+                // Update script and sheet sections
+                let inScript = false, inSheet = false, lastComment = null, currentSheetStart = -1;
+                for (let i = 0; i < modifiedLines.length; i++) {
+                    let line = modifiedLines[i].trim();
+                    if (line.startsWith('シート')) {
+                        inSheet = true;
+                        currentSheetStart = i;
+                        continue;
+                    }
+                    if (line.startsWith('シート終了')) {
+                        inSheet = false;
+                        currentSheetStart = -1;
+                        continue;
+                    }
+                    if (line.startsWith('スクリプト')) {
+                        inScript = true;
+                        continue;
+                    }
+                    if (line.startsWith('スクリプト終了')) {
+                        inScript = false;
+                        lastComment = null;
+                        continue;
+                    }
+                    if (inScript && line.startsWith('コマンド\tCOMMENT')) {
+                        if (i + 1 < modifiedLines.length && modifiedLines[i + 1].trim().startsWith('文字列')) {
+                            const comment = modifiedLines[i + 1].replace('文字列', '').trim();
+                            if (comment.startsWith('G#') || comment.startsWith('#')) {
+                                lastComment = {
+                                    id: comment.slice(comment.startsWith('G#') ? 2 : 1).split(/\s+/)[0],
+                                    isGraphic: comment.startsWith('G#')
+                                };
+                                lastComment.id = idMapping[lastComment.id] || lastComment.id;
                             }
                         }
-                        lastComment = null;
-                    } else if (commandType === 'ITEM') {
-                        // Update ITEM Guid
-                        if (i + 1 < modifiedLines.length && modifiedLines[i + 1].trim().startsWith('Guid')) {
-                            modifiedLines[i + 1] = `\t\tGuid\t|Guid|${lastComment.id}|`;
-                            logDebug(`Updated ITEM Guid to |Guid|${lastComment.id}| at line ${i + 2}`);
+                        continue;
+                    }
+                    if (inScript && lastComment) {
+                        const commandLine = line.split(/\s+/).filter(part => part);
+                        const commandType = commandLine[1] || '';
+                        if (lastComment.isGraphic && inSheet) {
+                            for (let j = currentSheetStart; j < i && j >= 0; j++) {
+                                if (modifiedLines[j].trim().startsWith('グラフィック')) {
+                                    modifiedLines[j] = `\tグラフィック\t|Guid|${lastComment.id}|`;
+                                    logDebug(`Updated グラフィック to |Guid|${lastComment.id}| at line ${j + 1}`);
+                                    break;
+                                }
+                            }
+                            lastComment = null;
+                        } else if (commandType === 'ITEM') {
+                            if (i + 1 < modifiedLines.length && modifiedLines[i + 1].trim().startsWith('Guid')) {
+                                modifiedLines[i + 1] = `\t\tGuid\t|Guid|${lastComment.id}|`;
+                                logDebug(`Updated ITEM Guid to |Guid|${lastComment.id}| at line ${i + 2}`);
+                            }
+                            lastComment = null;
+                        } else if (commandType === 'SWITCH') {
+                            if (i + 1 < modifiedLines.length && modifiedLines[i + 1].trim().startsWith('変数')) {
+                                modifiedLines[i + 1] = `\t\t変数\t"|文字列|${lastComment.id}|"`;
+                                logDebug(`Updated SWITCH 変数 to |文字列|${lastComment.id}| at line ${i + 2}`);
+                            }
+                            lastComment = null;
                         }
-                        lastComment = null;
-                    } else if (commandType === 'SWITCH') {
-                        // Update SWITCH 変数
-                        if (i + 1 < modifiedLines.length && modifiedLines[i + 1].trim().startsWith('変数')) {
-                            modifiedLines[i + 1] = `\t\t変数\t"|文字列|${lastComment.id}|"`;
-                            logDebug(`Updated SWITCH 変数 to |文字列|${lastComment.id}| at line ${i + 2}`);
-                        }
-                        lastComment = null;
                     }
                 }
-            }
 
-            // Update other references for changed 設定ID
-            for (let i = 0; i < modifiedLines.length; i++) {
-                let line = modifiedLines[i];
-                for (const [oldId, newId] of Object.entries(idMapping)) {
-                    ['Guid', '文字列', '整数', '表情'].forEach(type => {
-                        const pattern = `|${type}|${oldId}|`;
-                        if (line.includes(pattern)) {
-                            modifiedLines[i] = line.replace(pattern, `|${type}|${newId}|`);
-                            logDebug(`Replaced ${pattern} with |${type}|${newId}| at line ${i + 1}`);
-                        }
-                    });
+                // Update ID references
+                for (let i = 0; i < modifiedLines.length; i++) {
+                    let line = modifiedLines[i];
+                    for (const [oldId, newId] of Object.entries(idMapping)) {
+                        ['Guid', '文字列', '整数', '表情'].forEach(type => {
+                            const pattern = `|${type}|${oldId}|`;
+                            if (line.includes(pattern)) {
+                                modifiedLines[i] = line.replace(pattern, `|${type}|${newId}|`);
+                                logDebug(`Replaced ${pattern} with |${type}|${newId}| at line ${i + 1}`);
+                            }
+                        });
+                    }
                 }
+
+                // Generate updated template section
+                const settingBoxes = [];
+                for (const id in editedValues.settings) {
+                    const setting = editedValues.settings[id];
+                    if (setting.id && setting.type && setting.type !== 'DESCRIPTION') {
+                        const category = Object.keys(typeMap).find(key => typeMap[key] === setting.type) || 'UNKNOWN';
+                        settingBoxes.push({
+                            id: setting.id,
+                            desc: setting.desc || '',
+                            defaultGuid: setting.guid || '',
+                            defaultString: setting.string || '',
+                            defaultInteger: setting.int || '',
+                            category: category,
+                            type: setting.type
+                        });
+                    }
+                }
+
+                const newTemplateLines = [
+                    `テンプレート定義\t${editedValues.title || 'Unnamed Template'}`,
+                    `\t設定ボックス\t説明文`,
+                    `\t\tデフォルト文字列\t${editedValues.description || ''}`,
+                    `\t設定ボックス終了`,
+                    ...(settingBoxes.length ? settingBoxes.map(box => [
+                        `\t設定ボックス\t${box.category}`,
+                        `\t\t設定ID\t${box.id}`,
+                        `\t\t説明\t${box.desc}`,
+                        ...(box.defaultGuid && box.type !== 'ITEM' ? [`\t\tデフォルトGuid\t${box.defaultGuid}`] : []),
+                        ...(box.defaultString ? [`\t\tデフォルト文字列\t${box.defaultString}`] : []),
+                        ...(box.defaultInteger ? [`\t\tデフォルト整数\t${box.defaultInteger}`] : []),
+                        `\t設定ボックス終了`
+                    ].join('\n')) : []),
+                    `テンプレート定義終了`
+                ].flat();
+
+                // Replace or insert template section
+                let templateStartIndex = -1, templateEndIndex = -1;
+                for (let i = 0; i < modifiedLines.length; i++) {
+                    let line = modifiedLines[i].trim();
+                    if (line.startsWith('テンプレート定義') && !line.startsWith('テンプレート定義終了')) {
+                        templateStartIndex = i;
+                    }
+                    if (line.startsWith('テンプレート定義終了') && templateStartIndex !== -1) {
+                        templateEndIndex = i;
+                        break;
+                    }
+                }
+
+                if (templateStartIndex !== -1 && templateEndIndex !== -1 && templateEndIndex >= templateStartIndex) {
+                    modifiedLines.splice(templateStartIndex, templateEndIndex - templateStartIndex + 1, ...newTemplateLines);
+                    logDebug(`Replaced template section from line ${templateStartIndex + 1} to ${templateEndIndex + 1}`);
+                } else {
+                    let insertIndex = modifiedLines.findIndex(line => line.trim().startsWith('イベント名'));
+                    if (insertIndex === -1) insertIndex = 0;
+                    modifiedLines.splice(insertIndex, 0, ...newTemplateLines);
+                    logDebug(`Inserted new template section at line ${insertIndex + 1}`);
+                }
+
+                const recreatedFile = modifiedLines.join('\n');
+                logDebug('Exported file content:\n' + recreatedFile);
+
+                // Get filename from inputs
+                const filenameId = document.getElementById('filenameId').value || '090000';
+                const filenameString = document.getElementById('filenameString').value.trim();
+                const filename = filenameString ? `${filenameId}_${filenameString}.txt` : `${filenameId}.txt`;
+
+                const blob = new Blob([recreatedFile], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                alert('File exported successfully!');
+            } catch (error) {
+                logDebug(`Export failed: ${error.message}`);
+                alert('Failed to export file. Check debug log for details.');
             }
-
-            const recreatedFile = modifiedLines.join('\n');
-            logDebug('Exported file content:\n' + recreatedFile);
-
-            // Get filename from inputs
-            const filenameId = document.getElementById('filenameId').value || '090000';
-            const filenameString = document.getElementById('filenameString').value.trim();
-            const filename = filenameString ? `${filenameId}_${filenameString}.txt` : `${filenameId}.txt`;
-
-            const blob = new Blob([recreatedFile], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            alert('File exported successfully!');
         }
 
         // Update setting box
@@ -505,7 +596,7 @@
             if (settingId === '説明' && editedValues.description && indices.string !== -1) {
                 lines[indices.string] = `\tデフォルト文字列\t${editedValues.description}`;
             } else {
-                if (settings.guid && indices.guid !== -1) lines[indices.guid] = `\tデフォルトGuid\t${settings.guid}`;
+                if (settings.guid && indices.guid !== -1 && settings.type !== 'ITEM') lines[indices.guid] = `\tデフォルトGuid\t${settings.guid}`;
                 if (settings.desc && indices.desc !== -1) lines[indices.desc] = `\t説明\t${settings.desc}`;
                 if (settings.string && indices.string !== -1) lines[indices.string] = `\tデフォルト文字列\t${settings.string}`;
                 if (settings.anim && indices.string !== -1 && lines[startIndex].includes('キャラクターグラフィック')) lines[indices.string] = `\tデフォルト文字列\t${settings.anim}`;
