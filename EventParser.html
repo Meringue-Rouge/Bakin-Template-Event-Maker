@@ -2,28 +2,287 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>RPG Bakin Template Simulator</title>
+    <title>RPG Bakin Template Event Generator</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .setting-box { border: 1px solid #000; padding: 10px; margin: 10px 0; background-color: #f9f9f9; }
-        h1 { font-size: 24px; margin: 0 0 10px; }
-        h2 { font-size: 18px; margin: 0 0 5px; }
-        p { margin: 5px 0; }
-        input[type="file"] { margin: 20px 0; }
-        input[type="text"], input[type="number"], textarea { width: 100%; padding: 5px; margin-top: 5px; box-sizing: border-box; }
-        textarea { height: 80px; resize: vertical; }
-        label { display: block; margin-top: 10px; }
-        #debug { white-space: pre-wrap; background-color: #f0f0f0; padding: 10px; margin-top: 20px; }
-        button { margin-top: 20px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
-        button:hover { background-color: #45a049; }
-        .export-section { display: none; margin-top: 20px; }
-        .export-section.visible { display: block; }
-        .filename-input { width: 45%; display: inline-block; margin-right: 5%; }
-        .filename-input:last-child { margin-right: 0; }
+        /* General reset and typography */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* Headings */
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.75rem;
+        }
+
+        /* Paragraphs and text */
+        p {
+            margin-bottom: 0.5rem;
+            color: #4a4a4a;
+        }
+
+        /* Inputs and textareas */
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background-color: #fff;
+            font-size: 1rem;
+            color: #333;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        /* File input */
+        input[type="file"] {
+            margin: 1.5rem 0;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background-color: #fff;
+            cursor: pointer;
+        }
+
+        input[type="file"]::-webkit-file-upload-button {
+            padding: 8px 16px;
+            background-color: #6366f1;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        input[type="file"]::-webkit-file-upload-button:hover {
+            background-color: #4f46e5;
+        }
+
+        /* Labels */
+        label {
+            display: block;
+            margin-top: 1rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        /* Buttons */
+        button {
+            margin-top: 1.5rem;
+            padding: 12px 24px;
+            background-color: #6366f1;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        button:hover {
+            background-color: #4f46e5;
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Setting box */
+        .setting-box {
+            border: none;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: box-shadow 0.2s;
+        }
+
+        .setting-box:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Debug section */
+        #debug {
+            white-space: pre-wrap;
+            background-color: #1a1a1a;
+            color: #e5e7eb;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            border-radius: 12px;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        /* Export section */
+        .export-section {
+            display: none;
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .export-section.visible {
+            display: block;
+        }
+
+        .filename-input {
+            width: 48%;
+            display: inline-block;
+            margin-right: 4%;
+        }
+
+        .filename-input:last-child {
+            margin-right: 0;
+        }
+
+        /* Help section */
+        .help-section {
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .help-section h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #1a1a1a;
+        }
+
+        .help-section h2::after {
+            content: '▼';
+            font-size: 0.9rem;
+            transition: transform 0.2s;
+        }
+
+        .help-section.collapsed h2::after {
+            transform: rotate(-90deg);
+        }
+
+        .help-content {
+            display: block;
+            font-size: 0.95rem;
+            color: #4a4a4a;
+        }
+
+        .help-section.collapsed .help-content {
+            display: none;
+        }
+
+        .help-content ul {
+            list-style-type: disc;
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .help-content ul li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Responsive design */
+        @media (max-width: 600px) {
+            body {
+                padding: 20px 15px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .filename-input {
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 1rem;
+            }
+
+            .setting-box {
+                padding: 1rem;
+            }
+
+            .help-section {
+                padding: 1rem;
+            }
+        }
     </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code&display=swap" rel="stylesheet">
 </head>
 <body>
-    <h1>Upload RPG Bakin Template</h1>
+    <h1>RPG Developer Bakin: Turn Map/Common Events into Template Events</h1>
+    <div class="help-section" id="helpSection">
+        <h2>Help <span></span></h2>
+        <div class="help-content">
+            <p>This will let you convert any map event or common event into a Template Event, which can then be adjusted on the fly with parameters from the map. This will let you make more personalized events like a custom treasure chest event / door, without having to manually change every variable inside the event.</p>
+            <h3>How to Use:</h3>
+            <ul>
+                <li>Create your event in Bakin as either a Map Event or Common Event. Test it out first to see if it is working as intended.</li>
+                <li>Before exporting the event into a TXT file, you'll need to create "Note" (Comment) events just above the line of your event that you want the user to be able to modify through the UI. The text inside the comment must be formatted as #keyword, with keyword being anything you want. Only one comment per event line.</li>
+                <li>If you create two comments with two different keywords for two different lines, it'll create two parameters in the UI.</li>
+                <li>However, if you create two comments for two different lines but with the same keyword, it'll share the same UI for both those fields.</li>
+                <li>Only in normal event sheets (not parallel sheets), you can create a comment line with G#keyword, keyword being the keyword of your choice, to allow the user to change the model/graphics of the event sheet. This only applies to the sheet it's on, share the same keyword on another sheet to replace multiple, use a different keyword to let the user change more than one event sheet graphic, etc.</li>
+                <li>When everything's OK, export the txt and upload it on this website.</li>
+                <li>Double-check that all the events are parsed with your keyword (same keywords only result in one field, this is normal).</li>
+                <li>Fill in some descriptions, names, default GUIDs for graphics, etc.</li>
+                <li>Before exporting the file, fill in the name and give it an ID over 090000. You can't have files with the same ID.</li>
+                <li>Export and open your Bakin's Steamapps folder, located where your steam install is at.</li>
+                <li>Go to Steam\steamapps\common\BAKIN\data\en if you use an English version of Bakin, or Steam\steamapps\common\BAKIN\data\jp for a Japanese version.</li>
+                <li>For common events, drop it in the common_templates folder.</li>
+                <li>For a map event, drop it in the templates folder.</li>
+                <li>Make sure to add a bmp file with the exact same name as your txt file. Make a duplicate of one of the defaults in the same folder and rename it if you don't have one.</li>
+                <li>Close Bakin entirely and then open a game project.</li>
+                <li>For common events, it'll appear at the bottom when creating a standard common event. For a map event, it'll show up in a Event folder in the Events tab of placable entities.</li>
+            </ul>
+        </div>
+    </div>
     <input type="file" id="fileInput" accept=".txt">
     <div id="template-display"></div>
     <div id="exportSection" class="export-section">
@@ -613,6 +872,13 @@
 
         // Attach export button event
         document.getElementById('exportButton').addEventListener('click', exportFile);
+
+        // Toggle help section
+        document.getElementById('helpSection').addEventListener('click', function(event) {
+            if (event.target.closest('h2')) {
+                this.classList.toggle('collapsed');
+            }
+        });
     </script>
 </body>
 </html>
