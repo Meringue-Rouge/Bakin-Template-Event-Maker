@@ -5,6 +5,7 @@
 
 # Tested
 - Item variable
+- EventSheet graphics (using G#keywords)
 
 # Usage:
 - Create an event in Bakin.
