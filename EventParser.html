@@ -42,7 +42,18 @@
             'アイテム': 'ITEM',
             'バトル背景': 'BATTLE BACKGROUND',
             '説明文': 'DESCRIPTION',
-            '数値': 'INTEGER'
+            '数値': 'INTEGER',
+            'スイッチ': 'SWITCH'
+        };
+
+        // Command to template type mapping for generation
+        const commandTypeMap = {
+            'SWITCH': 'SWITCH',
+            'ITEM': 'ITEM',
+            'GRAPHIC': 'GRAPHICAL',
+            'DIALOGUE': 'MESSAGE',
+            'MONEY': 'INTEGER',
+            'BOSSBATTLE': 'MONSTER'
         };
 
         // Handle file upload
@@ -53,7 +64,12 @@
             reader.onload = e => {
                 originalLines = e.target.result.split('\n');
                 editedValues = { title: '', description: '', settings: {} };
-                const template = parseTemplate(originalLines);
+                let template = parseTemplate(originalLines);
+                if (!template.hasTemplate && template.eventName) {
+                    const { generatedTemplate, modifiedLines } = generateTemplate(originalLines, template.eventName);
+                    template = { ...generatedTemplate, hasTemplate: false, eventName: template.eventName };
+                    originalLines = [...modifiedLines, ...originalLines];
+                }
                 displayTemplate(template);
                 document.getElementById('exportButton').style.display = 'block';
                 logDebug('File loaded and parsed');
@@ -64,11 +80,17 @@
         // Parse template
         function parseTemplate(lines) {
             let title = '', description = '', settingBoxes = [], currentBox = null, currentCategory = '';
+            let hasTemplate = false, eventName = '';
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (line.startsWith('テンプレート定義') && !line.startsWith('テンプレート定義終了')) {
                     title = line.replace('テンプレート定義', '').trim() || 'Unnamed Template';
+                    hasTemplate = true;
+                    continue;
+                }
+                if (line.startsWith('イベント名')) {
+                    eventName = line.replace('イベント名', '').trim();
                     continue;
                 }
                 if (line.startsWith('設定ボックス')) {
@@ -103,7 +125,88 @@
                 }
             }
 
-            return { title, description, settingBoxes };
+            return { title, description, settingBoxes, hasTemplate, eventName };
+        }
+
+        // Generate template for files without one
+        function generateTemplate(lines, eventName) {
+            if (!eventName) return { generatedTemplate: { title: '', description: '', settingBoxes: [] }, modifiedLines: [] };
+
+            const settingBoxes = [];
+            const modifiedLines = [...lines];
+            let inScript = false, lastComment = null;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line.startsWith('スクリプト')) inScript = true;
+                else if (line.startsWith('スクリプト終了')) inScript = false;
+                else if (inScript && line.startsWith('コマンド')) {
+                    const parts = line.split(/\s+/).filter(part => part);
+                    const commandType = parts[1] || '';
+                    if (commandType === 'COMMENT') {
+                        if (i + 1 < lines.length && lines[i + 1].trim().startsWith('文字列')) {
+                            const comment = lines[i + 1].replace('文字列', '').trim();
+                            if (comment.startsWith('#')) {
+                                lastComment = { id: comment.slice(1).split(/\s+/)[0], lineIndex: i };
+                            }
+                        }
+                    } else if (lastComment && commandType in commandTypeMap) {
+                        const type = commandTypeMap[commandType];
+                        if (!settingBoxes.some(box => box.id === lastComment.id)) {
+                            const box = {
+                                id: lastComment.id,
+                                desc: '',
+                                defaultGuid: '',
+                                defaultString: '',
+                                defaultInteger: '',
+                                category: type === 'SWITCH' ? 'スイッチ' :
+                                         type === 'INTEGER' ? '数値' :
+                                         type === 'MESSAGE' ? '文章' :
+                                         type === 'ITEM' ? 'アイテム' :
+                                         type === 'GRAPHICAL' ? 'キャラクターグラフィック' :
+                                         type === 'MONSTER' ? 'モンスター' : type.toLowerCase(),
+                                type: type
+                            };
+                            if (i + 1 < lines.length) {
+                                const nextLine = lines[i + 1].trim();
+                                if (nextLine.startsWith('Guid')) box.defaultGuid = nextLine.replace('Guid', '').trim();
+                                else if (nextLine.startsWith('文字列')) box.defaultString = nextLine.replace('文字列', '').trim();
+                                else if (nextLine.startsWith('整数')) box.defaultInteger = nextLine.replace('整数', '').trim();
+                            }
+                            settingBoxes.push(box);
+                        }
+                        // Update SWITCH command's 変数 field
+                        if (commandType === 'SWITCH' && i + 1 < lines.length && lines[i + 1].trim().startsWith('変数')) {
+                            modifiedLines[i + 1] = `\t\t変数\t|文字列|${lastComment.id}|`;
+                            logDebug(`Replaced 変数 at line ${i + 2} with |文字列|${lastComment.id}|`);
+                        }
+                        lastComment = null;
+                    }
+                }
+            }
+
+            const generatedLines = [
+                `テンプレート定義\t${eventName}`,
+                ...(settingBoxes.length ? settingBoxes.map(box => [
+                    `\t設定ボックス\t${box.category}`,
+                    `\t\t設定ID\t${box.id}`,
+                    `\t\t説明\t${box.desc}`,
+                    ...(box.defaultGuid ? [`\t\tデフォルトGuid\t${box.defaultGuid}`] : []),
+                    ...(box.defaultString ? [`\t\tデフォルト文字列\t${box.defaultString}`] : []),
+                    ...(box.defaultInteger ? [`\t\tデフォルト整数\t${box.defaultInteger}`] : []),
+                    `\t設定ボックス終了`
+                ].join('\n')) : []),
+                `テンプレート定義終了`
+            ].flat();
+
+            return {
+                generatedTemplate: {
+                    title: eventName,
+                    description: '',
+                    settingBoxes
+                },
+                modifiedLines: generatedLines
+            };
         }
 
         // Display template
@@ -122,7 +225,7 @@
                     <div class="setting-box">
                         <h2>[${box.type}]</h2>
                         <label for="id-input-${box.id}">Setting ID:</label>
-                        <input type="text" id="id-input-${box.id}" value="${box.id}" onchange="updateField('settings.${box.id}.id', this.value)">
+                        <input type="text" id=" Rickroll Rickroll Rickroll id-input-${box.id}" value="${box.id}" onchange="updateField('settings.${box.id}.id', this.value)">
                         ${guidText ? `<p>${guidText}</p>` : ''}
                         ${box.type !== 'DESCRIPTION' ? `<label for="desc-input-${box.id}">Setting Description:</label><textarea id="desc-input-${box.id}" onchange="updateField('settings.${box.id}.desc', this.value)">${box.desc || ''}</textarea>` : ''}
                         ${renderInput(box.type, box)}
@@ -143,8 +246,8 @@
             if (type === 'GRAPHICAL' && box.defaultString) {
                 html += `<label for="anim-input-${box.id}">Animation Name:</label><input type="text" id="anim-input-${box.id}" value="${box.defaultString || ''}" onchange="updateField('settings.${box.id}.anim', this.value)">`;
             }
-            if (type === 'MESSAGE') {
-                html += `<label for="string-input-${box.id}">Message Text:</label><textarea id="string-input-${box.id}" onchange="updateField('settings.${box.id}.string', this.value)">${box.defaultString || ''}</textarea>`;
+            if (type === 'MESSAGE' || type === 'SWITCH') {
+                html += `<label for="string-input-${box.id}">${type === 'SWITCH' ? 'Switch Name' : 'Message Text'}:</label><textarea id="string-input-${box.id}" onchange="updateField('settings.${box.id}.string', this.value)">${box.defaultString || ''}</textarea>`;
             }
             if (type === 'INTEGER') {
                 html += `<label for="int-input-${box.id}">Value:</label><input type="number" id="int-input-${box.id}" value="${box.defaultInteger || '0'}" onchange="updateField('settings.${box.id}.int', this.value)">`;
@@ -172,9 +275,10 @@
             }
 
             const modifiedLines = [...originalLines];
-            const idMapping = {}; // Maps old ID to new ID
+            const idMapping = {};
             let inSettingBox = false, settingBoxLines = [], settingBoxStartIndex = 0;
 
+            // Update setting boxes and track ID changes
             for (let i = 0; i < modifiedLines.length; i++) {
                 let line = modifiedLines[i].trim();
                 if (line.startsWith('テンプレート定義') && !line.startsWith('テンプレート定義終了')) {
@@ -197,26 +301,51 @@
                 }
             }
 
-            // Update script references for changed 設定ID
+            // Update script section for #設定ID references
+            let inScript = false, lastCommentId = null;
+            for (let i = 0; i < modifiedLines.length; i++) {
+                let line = modifiedLines[i].trim();
+                if (line.startsWith('スクリプト')) {
+                    inScript = true;
+                    continue;
+                }
+                if (line.startsWith('スクリプト終了')) {
+                    inScript = false;
+                    lastCommentId = null;
+                    continue;
+                }
+                if (inScript && line.startsWith('コマンド\tCOMMENT')) {
+                    if (i + 1 < modifiedLines.length && modifiedLines[i + 1].trim().startsWith('文字列')) {
+                        const comment = modifiedLines[i + 1].replace('文字列', '').trim();
+                        if (comment.startsWith('#')) {
+                            lastCommentId = comment.slice(1).split(/\s+/)[0];
+                            // Apply idMapping if the 設定ID was changed
+                            lastCommentId = idMapping[lastCommentId] || lastCommentId;
+                        }
+                    }
+                    continue;
+                }
+                if (inScript && lastCommentId && line.startsWith('コマンド\tSWITCH')) {
+                    if (i + 1 < modifiedLines.length && modifiedLines[i + 1].trim().startsWith('変数')) {
+                        modifiedLines[i + 1] = `\t\t変数\t|文字列|${lastCommentId}|`;
+                        logDebug(`Updated SWITCH 変数 to |文字列|${lastCommentId}| at line ${i + 2}`);
+                    }
+                    lastCommentId = null; // Reset after processing
+                    continue;
+                }
+            }
+
+            // Update other references (Guid, 文字列, etc.) for changed 設定ID
             for (let i = 0; i < modifiedLines.length; i++) {
                 let line = modifiedLines[i];
                 for (const [oldId, newId] of Object.entries(idMapping)) {
-                    if (line.includes(`|Guid|${oldId}|`)) {
-                        modifiedLines[i] = line.replace(`|Guid|${oldId}|`, `|Guid|${newId}|`);
-                        logDebug(`Replaced |Guid|${oldId}| with |Guid|${newId}| at line ${i + 1}`);
-                    }
-                    if (line.includes(`|文字列|${oldId}|`)) {
-                        modifiedLines[i] = line.replace(`|文字列|${oldId}|`, `|文字列|${newId}|`);
-                        logDebug(`Replaced |文字列|${oldId}| with |文字列|${newId}| at line ${i + 1}`);
-                    }
-                    if (line.includes(`|整数|${oldId}|`)) {
-                        modifiedLines[i] = line.replace(`|整数|${oldId}|`, `|整数|${newId}|`);
-                        logDebug(`Replaced |整数|${oldId}| with |整数|${newId}| at line ${i + 1}`);
-                    }
-                    if (line.includes(`|表情|${oldId}|`)) {
-                        modifiedLines[i] = line.replace(`|表情|${oldId}|`, `|表情|${newId}|`);
-                        logDebug(`Replaced |表情|${oldId}| with |表情|${newId}| at line ${i + 1}`);
-                    }
+                    ['Guid', '文字列', '整数', '表情'].forEach(type => {
+                        const pattern = `|${type}|${oldId}|`;
+                        if (line.includes(pattern)) {
+                            modifiedLines[i] = line.replace(pattern, `|${type}|${newId}|`);
+                            logDebug(`Replaced ${pattern} with |${type}|${newId}| at line ${i + 1}`);
+                        }
+                    });
                 }
             }
 
