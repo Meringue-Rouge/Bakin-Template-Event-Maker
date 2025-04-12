@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>RPG Bakin Template Simulator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .setting-box {
+            border: 1px solid #000;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            font-size: 24px;
+            margin: 0 0 10px;
+        }
+        h2 {
+            font-size: 18px;
+            margin: 0 0 5px 0;
+        }
+        p {
+            margin: 5px 0;
+        }
+        input[type="file"] {
+            margin: 20px 0;
+        }
+        input[type="text"], textarea, input[type="number"] {
+            width: 100%;
+            padding: 5px;
+            margin-top: 5px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 80px;
+            resize: vertical;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+        #debug {
+            white-space: pre-wrap;
+            background-color: #f0f0f0;
+            padding: 10px;
+            margin-top: 20px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Upload RPG Bakin Template</h1>
+    <input type="file" id="fileInput" accept=".txt">
+    <div id="template-display"></div>
+    <button id="exportButton" style="display:none;">Export File</button>
+    <div id="debug"></div>
+
+    <script>
+        // Global storage for original lines and edited values
+        let originalLines = [];
+        let editedGuids = {};
+        let editedTitle = '';
+        let editedDescription = '';
+        let editedDescriptions = {};
+        let editedConversationStrings = {};
+        let editedMapCoordinates = {};
+        let editedOrientations = {};
+        let editedCollisionSizes = {};
+        let editedAnimationNames = {};
+
+        // Debug logging function
+        function logDebug(message) {
+            const debugDiv = document.getElementById('debug');
+            debugDiv.textContent += message + '\n';
+        }
+
+        // Handle file upload
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const text = e.target.result;
+                    logDebug('File loaded successfully');
+                    // Store original lines for export
+                    originalLines = text.split('\n');
+                    // Reset edited values
+                    editedGuids = {};
+                    editedTitle = '';
+                    editedDescription = '';
+                    editedDescriptions = {};
+                    editedConversationStrings = {};
+                    editedMapCoordinates = {};
+                    editedOrientations = {};
+                    editedCollisionSizes = {};
+                    editedAnimationNames = {};
+                    const template = parseTemplate(text);
+                    logDebug('Parsed template: ' + JSON.stringify(template, null, 2));
+                    displayTemplate(template);
+                    // Show export button
+                    document.getElementById('exportButton').style.display = 'block';
+                };
+                reader.readAsText(file);
+            } else {
+                logDebug('No file selected');
+            }
+        });
+
+        // Parse the template from the text
+        function parseTemplate(text) {
+            const lines = text.split('\n').map(line => line.trim());
+            let title = '';
+            let description = '';
+            const settingBoxes = [];
+            let currentBox = null;
+
+            logDebug('Starting parse with ' + lines.length + ' lines');
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                logDebug('Line ' + (i + 1) + ': ' + line);
+
+                // Title
+                if (line.startsWith('テンプレート定義') && !line.startsWith('テンプレート定義終了')) {
+                    title = line.replace('テンプレート定義', '').trim() || 'Unnamed Template';
+                    logDebug('Title set: ' + title);
+                    continue;
+                }
+
+                // Start a new setting box
+                if (line.startsWith('設定ボックス')) {
+                    if (currentBox) {
+                        // Save the previous box if it exists
+                        if (currentBox.id === '説明') {
+                            description = currentBox.defaultString || '';
+                            logDebug('Description set: ' + description);
+                        } else if (currentBox.id) {
+                            settingBoxes.push({
+                                id: currentBox.id,
+                                desc: currentBox.desc,
+                                defaultGuid: currentBox.defaultGuid,
+                                defaultString: currentBox.defaultString,
+                                defaultInteger: currentBox.defaultInteger
+                            });
+                            logDebug('Added setting box: ' + JSON.stringify(currentBox));
+                        }
+                    }
+                    currentBox = { id: '', desc: '', defaultGuid: '', defaultString: '', defaultInteger: '' };
+                    logDebug('Started new setting box');
+                    continue;
+                }
+
+                // Process setting box properties
+                if (currentBox) {
+                    if (line.startsWith('設定ID')) {
+                        currentBox.id = line.replace('設定ID', '').trim();
+                        logDebug('Set ID: ' + currentBox.id);
+                    } else if (line.startsWith('説明')) {
+                        currentBox.desc = line.replace('説明', '').trim();
+                        logDebug('Set description: ' + currentBox.desc);
+                    } else if (line.startsWith('デフォルトGuid')) {
+                        currentBox.defaultGuid = line.replace('デフォルトGuid', '').trim();
+                        logDebug('Set default GUID: ' + currentBox.defaultGuid);
+                    } else if (line.startsWith('デフォルト文字列')) {
+                        currentBox.defaultString = line.replace('デフォルト文字列', '').trim();
+                        logDebug('Set default string: ' + currentBox.defaultString);
+                    } else if (line.startsWith('デフォルト整数')) {
+                        currentBox.defaultInteger = line.replace('デフォルト整数', '').trim();
+                        logDebug('Set default integer: ' + currentBox.defaultInteger);
+                    }
+                }
+
+                // End a setting box
+                if (line.startsWith('設定ボックス終了') && currentBox) {
+                    if (currentBox.id === '説明') {
+                        description = currentBox.defaultString || '';
+                        logDebug('Description set: ' + description);
+                    } else if (currentBox.id) {
+                        settingBoxes.push({
+                            id: currentBox.id,
+                            desc: currentBox.desc,
+                            defaultGuid: currentBox.defaultGuid,
+                            defaultString: currentBox.defaultString,
+                            defaultInteger: currentBox.defaultInteger
+                        });
+                        logDebug('Added setting box: ' + JSON.stringify({
+                            id: currentBox.id,
+                            desc: currentBox.desc,
+                            defaultGuid: currentBox.defaultGuid,
+                            defaultString: currentBox.defaultString,
+                            defaultInteger: currentBox.defaultInteger
+                        }));
+                    }
+                    currentBox = null;
+                    logDebug('Ended setting box');
+                    continue;
+                }
+
+                // Stop at end of template definition
+                if (line.startsWith('テンプレート定義終了')) {
+                    if (currentBox) {
+                        if (currentBox.id === '説明') {
+                            description = currentBox.defaultString || '';
+                            logDebug('Description set: ' + description);
+                        } else if (currentBox.id) {
+                            settingBoxes.push({
+                                id: currentBox.id,
+                                desc: currentBox.desc,
+                                defaultGuid: currentBox.defaultGuid,
+                                defaultString: currentBox.defaultString,
+                                defaultInteger: currentBox.defaultInteger
+                            });
+                            logDebug('Added setting box: ' + JSON.stringify(currentBox));
+                        }
+                        currentBox = null;
+                    }
+                    logDebug('Template definition ended');
+                    break;
+                }
+            }
+
+            // Determine types for setting boxes
+            const settingIdToType = determineTypes(lines);
+            logDebug('Types: ' + JSON.stringify(settingIdToType));
+
+            return { title, description, settingBoxes, settingIdToType };
+        }
+
+        // Determine types based on script commands and setting IDs
+        function determineTypes(lines) {
+            const settingIdToType = {};
+            let inScript = false;
+            let currentCommand = '';
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line.startsWith('スクリプト')) {
+                    inScript = true;
+                    logDebug('Entered script section');
+                } else if (line.startsWith('スクリプト終了')) {
+                    inScript = false;
+                    logDebug('Exited script section');
+                    currentCommand = ''; // Reset command when script ends
+                } else if (inScript && line.startsWith('コマンド')) {
+                    const parts = line.split(/\s+/).filter(part => part);
+                    logDebug('Command parts: ' + JSON.stringify(parts));
+                    currentCommand = parts.length > 1 ? parts[1].trim() : '';
+                    logDebug('Command set to: ' + currentCommand);
+                } else if (line.startsWith('コマンド終了')) {
+                    currentCommand = '';
+                    logDebug('Command ended');
+                } else if (inScript && line.includes('|Guid|')) {
+                    const parts = line.split('|');
+                    if (parts.length >= 3 && parts[1].trim() === 'Guid') {
+                        const settingId = parts[2].trim();
+                        logDebug('Found Guid line for setting ID: ' + settingId + ', current command: ' + currentCommand);
+                        if (currentCommand === 'ITEM') {
+                            settingIdToType[settingId] = 'ITEM';
+                            logDebug('Assigned ITEM to ' + settingId);
+                        } else if (currentCommand === 'GRAPHIC') {
+                            settingIdToType[settingId] = 'GRAPHICAL';
+                            logDebug('Assigned GRAPHICAL to ' + settingId);
+                        } else if (currentCommand === 'DIALOGUE') {
+                            for (let j = i - 1; j >= 0; j--) {
+                                const prevLine = lines[j].trim();
+                                if (prevLine.includes('|文字列|') && prevLine.includes(settingId)) {
+                                    break;
+                                }
+                                if (prevLine.includes('|表情|') && prevLine.includes(settingId)) {
+                                    settingIdToType[settingId] = 'FACIAL GRAPHICS';
+                                    logDebug('Assigned FACIAL GRAPHICS to ' + settingId);
+                                    break;
+                                }
+                            }
+                        } else if (currentCommand === 'SHOP') {
+                            settingIdToType[settingId] = 'ITEM FOR SHOP';
+                            logDebug('Assigned ITEM FOR SHOP to ' + settingId);
+                        } else if (currentCommand === 'PLAYSE') {
+                            settingIdToType[settingId] = 'SOUND EFFECT - DOOR SOUND';
+                            logDebug('Assigned SOUND EFFECT - DOOR SOUND to ' + settingId);
+                        } else if (currentCommand === 'BOSSBATTLE') {
+                            if (settingId === 'モンスター') {
+                                settingIdToType[settingId] = 'MONSTER - FIGHT';
+                                logDebug('Assigned MONSTER - FIGHT to ' + settingId);
+                            } else if (settingId === 'バトル背景') {
+                                settingIdToType[settingId] = 'BATTLE BACKGROUND';
+                                logDebug('Assigned BATTLE BACKGROUND to ' + settingId);
+                            }
+                        }
+                    }
+                } else if (line.startsWith('グラフィック') && line.includes('|Guid|')) {
+                    const parts = line.split('|');
+                    if (parts.length >= 3 && parts[1].trim() === 'Guid') {
+                        const settingId = parts[2].trim();
+                        settingIdToType[settingId] = 'GRAPHICAL';
+                        logDebug('Assigned GRAPHICAL to ' + settingId);
+                    }
+                } else if (line.startsWith('設定ID')) {
+                    const settingId = line.replace('設定ID', '').trim();
+                    if (settingId === 'キャラクターフェイス') {
+                        settingIdToType[settingId] = 'FACIAL GRAPHICS';
+                        logDebug('Assigned FACIAL GRAPHICS to ' + settingId + ' based on 設定ID');
+                    } else if (settingId === 'キャラクターの台詞' || settingId === '商人の台詞' || settingId === '別れるときの商人の台詞' || settingId === '出会ったときの台詞') {
+                        settingIdToType[settingId] = 'MESSAGE - TREASURE CHEST';
+                        logDebug('Assigned MESSAGE - TREASURE CHEST to ' + settingId + ' based on 設定ID');
+                    } else if (settingId.match(/^品目[1-6]$/)) {
+                        settingIdToType[settingId] = 'ITEM FOR SHOP';
+                        logDebug('Assigned ITEM FOR SHOP to ' + settingId + ' based on 設定ID');
+                    } else if (settingId === '移動先') {
+                        settingIdToType[settingId] = 'MAP COORDINATE - WARP TO COORDINATES';
+                        logDebug('Assigned MAP COORDINATE - WARP TO COORDINATES to ' + settingId + ' based on 設定ID');
+                    } else if (settingId === '方向') {
+                        settingIdToType[settingId] = 'ORIENTATION - AFTER MOVEMENT';
+                        logDebug('Assigned ORIENTATION - AFTER MOVEMENT to ' + settingId + ' based on 設定ID');
+                    } else if (settingId === '扉の効果音') {
+                        settingIdToType[settingId] = 'SOUND EFFECT - DOOR SOUND';
+                        logDebug('Assigned SOUND EFFECT - DOOR SOUND to ' + settingId + ' based on 設定ID');
+                    } else if (settingId === '判定サイズ') {
+                        settingIdToType[settingId] = 'COLLISION SIZE - DOOR';
+                        logDebug('Assigned COLLISION SIZE - DOOR to ' + settingId + ' based on 設定ID');
+                    } else if (settingId === 'モンスター') {
+                        settingIdToType[settingId] = 'MONSTER - FIGHT';
+                        logDebug('Assigned MONSTER - FIGHT to ' + settingId + ' based on 設定ID');
+                    } else if (settingId === 'バトル背景') {
+                        settingIdToType[settingId] = 'BATTLE BACKGROUND';
+                        logDebug('Assigned BATTLE BACKGROUND to ' + settingId + ' based on 設定ID');
+                    } else if (settingId === 'アイテム') {
+                        settingIdToType[settingId] = 'ITEM';
+                        logDebug('Assigned ITEM to ' + settingId + ' based on 設定ID');
+                    }
+                }
+            }
+
+            return settingIdToType;
+        }
+
+        // Display the parsed template
+        function displayTemplate({ title, description, settingBoxes, settingIdToType }) {
+            const displayDiv = document.getElementById('template-display');
+            let html = '';
+
+            if (!title && !description && settingBoxes.length === 0) {
+                html = '<p>No valid template data found.</p>';
+                logDebug('No valid data to display');
+            } else {
+                html = `
+                    <label for="title-input">Template Title:</label>
+                    <input type="text" id="title-input" value="${title || ''}" onchange="updateTitle(this.value)">
+                    <label for="description-input">Template Description:</label>
+                    <textarea id="description-input" onchange="updateDescription(this.value)">${description || ''}</textarea>
+                `;
+                for (const box of settingBoxes) {
+                    const type = settingIdToType[box.id] || 'UNKNOWN';
+                    const guidText = box.defaultGuid && type !== 'GRAPHICAL' && type !== 'FACIAL GRAPHICS' && type !== 'ITEM FOR SHOP' && type !== 'SOUND EFFECT - DOOR SOUND' && type !== 'BATTLE BACKGROUND' && type !== 'MONSTER - FIGHT' && type !== 'ITEM' ? ` (GUID: ${box.defaultGuid})` : '';
+                    html += `
+                        <div class="setting-box">
+                            <h2>[${type}]</h2>
+                            ${guidText ? `<p>${guidText}</p>` : ''}
+                    `;
+                    // Add editable description for non-"説明" setting boxes
+                    if (box.id !== '説明') {
+                        const descInputId = `desc-input-${box.id}`;
+                        html += `
+                            <label for="${descInputId}">Setting Description:</label>
+                            <textarea id="${descInputId}" onchange="updateSettingDescription('${box.id}', this.value)">${box.desc || ''}</textarea>
+                        `;
+                    }
+                    // Add GUID input for GRAPHICAL, FACIAL GRAPHICS, ITEM FOR SHOP, SOUND EFFECT, BATTLE BACKGROUND, MONSTER, and ITEM
+                    if (type === 'GRAPHICAL' || type === 'FACIAL GRAPHICS' || type === 'ITEM FOR SHOP' || type === 'SOUND EFFECT - DOOR SOUND' || type === 'BATTLE BACKGROUND' || type === 'MONSTER - FIGHT' || type === 'ITEM') {
+                        const inputId = `guid-input-${box.id}`;
+                        html += `
+                            <label for="${inputId}">Edit GUID:</label>
+                            <input type="text" id="${inputId}" value="${box.defaultGuid || ''}" onchange="updateGuid('${box.id}', this.value)">
+                        `;
+                    }
+                    // Add animation name input for GRAPHICAL
+                    if (type === 'GRAPHICAL' && box.defaultString) {
+                        const animInputId = `anim-input-${box.id}`;
+                        html += `
+                            <label for="${animInputId}">Animation Name:</label>
+                            <input type="text" id="${animInputId}" value="${box.defaultString || ''}" onchange="updateAnimationName('${box.id}', this.value)">
+                        `;
+                    }
+                    // Add conversation string input for CONVERSATION and MESSAGE
+                    if (type === 'CONVERSATION' || type === 'MESSAGE - TREASURE CHEST') {
+                        const stringInputId = `string-input-${box.id}`;
+                        html += `
+                            <label for="${stringInputId}">${type === 'CONVERSATION' ? 'Dialogue Text' : 'Message Text'}:</label>
+                            <textarea id="${stringInputId}" onchange="updateConversationString('${box.id}', this.value)">${box.defaultString || ''}</textarea>
+                        `;
+                    }
+                    // Add map coordinate input for MAP COORDINATE
+                    if (type === 'MAP COORDINATE - WARP TO COORDINATES') {
+                        const coordInputId = `coord-input-${box.id}`;
+                        html += `
+                            <label for="${coordInputId}">Map Coordinates:</label>
+                            <input type="text" id="${coordInputId}" value="${box.defaultString || ''}" onchange="updateMapCoordinate('${box.id}', this.value)">
+                        `;
+                    }
+                    // Add orientation input for ORIENTATION
+                    if (type === 'ORIENTATION - AFTER MOVEMENT') {
+                        const orientInputId = `orient-input-${box.id}`;
+                        html += `
+                            <label for="${orientInputId}">Orientation:</label>
+                            <input type="text" id="${orientInputId}" value="${box.defaultString || ''}" onchange="updateOrientation('${box.id}', this.value)">
+                        `;
+                    }
+                    // Add collision size input for COLLISION SIZE
+                    if (type === 'COLLISION SIZE - DOOR') {
+                        const sizeInputId = `size-input-${box.id}`;
+                        html += `
+                            <label for="${sizeInputId}">Collision Size:</label>
+                            <input type="number" id="${sizeInputId}" value="${box.defaultInteger || '1'}" onchange="updateCollisionSize('${box.id}', this.value)">
+                        `;
+                    }
+                    html += `</div>`;
+                }
+                logDebug('Displayed ' + settingBoxes.length + ' setting boxes');
+            }
+
+            displayDiv.innerHTML = html;
+        }
+
+        // Update title
+        function updateTitle(newTitle) {
+            editedTitle = newTitle.trim();
+            logDebug(`Updated title: ${editedTitle}`);
+        }
+
+        // Update template description
+        function updateDescription(newDescription) {
+            editedDescription = newDescription.trim();
+            logDebug(`Updated description: ${editedDescription}`);
+        }
+
+        // Update setting box description
+        function updateSettingDescription(settingId, newDescription) {
+            editedDescriptions[settingId] = newDescription.trim();
+            logDebug(`Updated setting description for ${settingId}: ${newDescription}`);
+        }
+
+        // Update conversation string
+        function updateConversationString(settingId, newString) {
+            editedConversationStrings[settingId] = newString.trim();
+            logDebug(`Updated conversation string for ${settingId}: ${newString}`);
+        }
+
+        // Update GUID
+        function updateGuid(settingId, newGuid) {
+            editedGuids[settingId] = newGuid.trim();
+            logDebug(`Updated GUID for ${settingId}: ${newGuid}`);
+        }
+
+        // Update map coordinate
+        function updateMapCoordinate(settingId, newCoord) {
+            editedMapCoordinates[settingId] = newCoord.trim();
+            logDebug(`Updated map coordinate for ${settingId}: ${newCoord}`);
+        }
+
+        // Update orientation
+        function updateOrientation(settingId, newOrientation) {
+            editedOrientations[settingId] = newOrientation.trim();
+            logDebug(`Updated orientation for ${settingId}: ${newOrientation}`);
+        }
+
+        // Update collision size
+        function updateCollisionSize(settingId, newSize) {
+            editedCollisionSizes[settingId] = newSize.trim();
+            logDebug(`Updated collision size for ${settingId}: ${newSize}`);
+        }
+
+        // Update animation name
+        function updateAnimationName(settingId, newAnim) {
+            editedAnimationNames[settingId] = newAnim.trim();
+            logDebug(`Updated animation name for ${settingId}: ${newAnim}`);
+        }
+
+        // Export the original file with updated values
+        function exportFile() {
+            if (!originalLines.length) {
+                logDebug('No original lines to export');
+                alert('No file data available to export.');
+                return;
+            }
+
+            // Create a copy of original lines
+            let modifiedLines = [...originalLines];
+            let inSettingBox = false;
+            let settingBoxLines = [];
+            let settingBoxStartIndex = 0;
+
+            // Process lines to update all editable fields
+            for (let i = 0; i < modifiedLines.length; i++) {
+                const line = modifiedLines[i].trim();
+
+                // Update title
+                if (line.startsWith('テンプレート定義') && !line.startsWith('テンプレート定義終了')) {
+                    if (editedTitle) {
+                        modifiedLines[i] = `テンプレート定義\t${editedTitle}`;
+                        logDebug(`Replaced title with ${editedTitle} at line ${i + 1}`);
+                    }
+                    continue;
+                }
+
+                // Process setting boxes
+                if (line.startsWith('設定ボックス')) {
+                    if (inSettingBox && settingBoxLines.length > 0) {
+                        // Process the previous setting box
+                        let settingId = '';
+                        let guidLineIndex = -1;
+                        let descriptionLineIndex = -1;
+                        let settingDescLineIndex = -1;
+                        let integerLineIndex = -1;
+                        for (let j = 0; j < settingBoxLines.length; j++) {
+                            const boxLine = settingBoxLines[j].trim();
+                            if (boxLine.startsWith('設定ID')) {
+                                settingId = boxLine.replace('設定ID', '').trim();
+                            } else if (boxLine.startsWith('デフォルトGuid')) {
+                                guidLineIndex = settingBoxStartIndex + j;
+                            } else if (boxLine.startsWith('デフォルト文字列')) {
+                                descriptionLineIndex = settingBoxStartIndex + j;
+                            } else if (boxLine.startsWith('説明')) {
+                                settingDescLineIndex = settingBoxStartIndex + j;
+                            } else if (boxLine.startsWith('デフォルト整数')) {
+                                integerLineIndex = settingBoxStartIndex + j;
+                            }
+                        }
+                        if (settingId && settingId in editedGuids && guidLineIndex !== -1) {
+                            const newGuid = editedGuids[settingId];
+                            modifiedLines[guidLineIndex] = `\tデフォルトGuid\t${newGuid}`;
+                            logDebug(`Replaced GUID for ${settingId} with ${newGuid} at line ${guidLineIndex + 1}`);
+                        }
+                        if (settingId === '説明' && editedDescription && descriptionLineIndex !== -1) {
+                            modifiedLines[descriptionLineIndex] = `\tデフォルト文字列\t${editedDescription}`;
+                            logDebug(`Replaced template description with ${editedDescription} at line ${descriptionLineIndex + 1}`);
+                        }
+                        if (settingId && settingId in editedDescriptions && settingDescLineIndex !== -1) {
+                            const newDesc = editedDescriptions[settingId];
+                            modifiedLines[settingDescLineIndex] = `\t説明\t${newDesc}`;
+                            logDebug(`Replaced setting description for ${settingId} with ${newDesc} at line ${settingDescLineIndex + 1}`);
+                        }
+                        if (settingId && settingId in editedConversationStrings && descriptionLineIndex !== -1) {
+                            const newString = editedConversationStrings[settingId];
+                            modifiedLines[descriptionLineIndex] = `\tデフォルト文字列\t${newString}`;
+                            logDebug(`Replaced conversation string for ${settingId} with ${newString} at line ${descriptionLineIndex + 1}`);
+                        }
+                        if (settingId && settingId in editedMapCoordinates && descriptionLineIndex !== -1) {
+                            const newCoord = editedMapCoordinates[settingId];
+                            modifiedLines[descriptionLineIndex] = `\tデフォルト文字列\t${newCoord}`;
+                            logDebug(`Replaced map coordinate for ${settingId} with ${newCoord} at line ${descriptionLineIndex + 1}`);
+                        }
+                        if (settingId && settingId in editedOrientations && descriptionLineIndex !== -1) {
+                            const newOrientation = editedOrientations[settingId];
+                            modifiedLines[descriptionLineIndex] = `\tデフォルト文字列\t${newOrientation}`;
+                            logDebug(`Replaced orientation for ${settingId} with ${newOrientation} at line ${descriptionLineIndex + 1}`);
+                        }
+                        if (settingId && settingId in editedCollisionSizes && integerLineIndex !== -1) {
+                            const newSize = editedCollisionSizes[settingId];
+                            modifiedLines[integerLineIndex] = `\tデフォルト整数\t${newSize}`;
+                            logDebug(`Replaced collision size for ${settingId} with ${newSize} at line ${integerLineIndex + 1}`);
+                        }
+                        if (settingId && settingId in editedAnimationNames && descriptionLineIndex !== -1 && settingIdToType[settingId] === 'GRAPHICAL') {
+                            const newAnim = editedAnimationNames[settingId];
+                            modifiedLines[descriptionLineIndex] = `\tデフォルト文字列\t${newAnim}`;
+                            logDebug(`Replaced animation name for ${settingId} with ${newAnim} at line ${descriptionLineIndex + 1}`);
+                        }
+                    }
+                    // Start a new setting box
+                    inSettingBox = true;
+                    settingBoxLines = [];
+                    settingBoxStartIndex = i;
+                }
+
+                if (inSettingBox) {
+                    settingBoxLines.push(modifiedLines[i]);
+                }
+
+                if (line.startsWith('設定ボックス終了')) {
+                    // Process the current setting box
+                    let settingId = '';
+                    let guidLineIndex = -1;
+                    let descriptionLineIndex = -1;
+                    let settingDescLineIndex = -1;
+                    let integerLineIndex = -1;
+                    for (let j = 0; j < settingBoxLines.length; j++) {
+                        const boxLine = settingBoxLines[j].trim();
+                        if (boxLine.startsWith('設定ID')) {
+                            settingId = boxLine.replace('設定ID', '').trim();
+                        } else if (boxLine.startsWith('デフォルトGuid')) {
+                            guidLineIndex = settingBoxStartIndex + j;
+                        } else if (boxLine.startsWith('デフォルト文字列')) {
+                            descriptionLineIndex = settingBoxStartIndex + j;
+                        } else if (boxLine.startsWith('説明')) {
+                            settingDescLineIndex = settingBoxStartIndex + j;
+                        } else if (boxLine.startsWith('デフォルト整数')) {
+                            integerLineIndex = settingBoxStartIndex + j;
+                        }
+                    }
+                    if (settingId && settingId in editedGuids && guidLineIndex !== -1) {
+                        const newGuid = editedGuids[settingId];
+                        modifiedLines[guidLineIndex] = `\tデフォルトGuid\t${newGuid}`;
+                        logDebug(`Replaced GUID for ${settingId} with ${newGuid} at line ${guidLineIndex + 1}`);
+                    }
+                    if (settingId === '説明' && editedDescription && descriptionLineIndex !== -1) {
+                        modifiedLines[descriptionLineIndex] = `\tデフォルト文字列\t${editedDescription}`;
+                        logDebug(`Replaced template description with ${editedDescription} at line ${descriptionLineIndex + 1}`);
+                    }
+                    if (settingId && settingId in editedDescriptions && settingDescLineIndex !== -1) {
+                        const newDesc = editedDescriptions[settingId];
+                        modifiedLines[settingDescLineIndex] = `\t説明\t${newDesc}`;
+                        logDebug(`Replaced setting description for ${settingId} with ${newDesc} at line ${settingDescLineIndex + 1}`);
+                    }
+                    if (settingId && settingId in editedConversationStrings && descriptionLineIndex !== -1) {
+                        const newString = editedConversationStrings[settingId];
+                        modifiedLines[descriptionLineIndex] = `\tデフォルト文字列\t${newString}`;
+                        logDebug(`Replaced conversation string for ${settingId} with ${newString} at line ${descriptionLineIndex + 1}`);
+                    }
+                    if (settingId && settingId in editedMapCoordinates && descriptionLineIndex !== -1) {
+                        const newCoord = editedMapCoordinates[settingId];
+                        modifiedLines[descriptionLineIndex] = `\tデフォルト文字列\t${newCoord}`;
+                        logDebug(`Replaced map coordinate for ${settingId} with ${newCoord} at line ${descriptionLineIndex + 1}`);
+                    }
+                    if (settingId && settingId in editedOrientations && descriptionLineIndex !== -1) {
+                        const newOrientation = editedOrientations[settingId];
+                        modifiedLines[descriptionLineIndex] = `\tデフォルト文字列\t${newOrientation}`;
+                        logDebug(`Replaced orientation for ${settingId} with ${newOrientation} at line ${descriptionLineIndex + 1}`);
+                    }
+                    if (settingId && settingId in editedCollisionSizes && integerLineIndex !== -1) {
+                        const newSize = editedCollisionSizes[settingId];
+                        modifiedLines[integerLineIndex] = `\tデフォルト整数\t${newSize}`;
+                        logDebug(`Replaced collision size for ${settingId} with ${newSize} at line ${integerLineIndex + 1}`);
+                    }
+                    if (settingId && settingId in editedAnimationNames && descriptionLineIndex !== -1 && settingIdToType[settingId] === 'GRAPHICAL') {
+                        const newAnim = editedAnimationNames[settingId];
+                        modifiedLines[descriptionLineIndex] = `\tデフォルト文字列\t${newAnim}`;
+                        logDebug(`Replaced animation name for ${settingId} with ${newAnim} at line ${descriptionLineIndex + 1}`);
+                    }
+                    // Reset for the next setting box
+                    inSettingBox = false;
+                    settingBoxLines = [];
+                }
+            }
+
+            // Reconstruct the file
+            const recreatedFile = modifiedLines.join('\n');
+            logDebug('Exported file content:');
+            logDebug(recreatedFile);
+
+            // Create a downloadable file
+            const blob = new Blob([recreatedFile], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'exported_template.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            alert('File exported successfully with updated values!');
+        }
+
+        // Attach export button event
+        document.getElementById('exportButton').addEventListener('click', exportFile);
+    </script>
+</body>
+</html>
