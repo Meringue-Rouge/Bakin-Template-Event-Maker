@@ -79,6 +79,7 @@
                     const { generatedTemplate, modifiedLines } = generateTemplate(originalLines, template.eventName);
                     template = { ...generatedTemplate, hasTemplate: false, eventName: template.eventName };
                     originalLines = [...modifiedLines, ...originalLines];
+                    editedValues.title = generatedTemplate.title; // Ensure title is set
                 }
                 displayTemplate(template);
                 document.getElementById('exportSection').classList.add('visible');
@@ -95,7 +96,7 @@
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (line.startsWith('テンプレート定義') && !line.startsWith('テンプレート定義終了')) {
-                    title = line.replace('テンプレート定義', '').trim() || 'Unnamed Template';
+                    title = line.replace('テンプレート定義', '').trim();
                     hasTemplate = true;
                     continue;
                 }
@@ -136,7 +137,7 @@
             }
 
             // Store parsed settings in editedValues
-            editedValues.title = title;
+            editedValues.title = title || eventName || '';
             editedValues.description = description;
             settingBoxes.forEach(box => {
                 editedValues.settings[box.id] = {
@@ -154,7 +155,10 @@
 
         // Generate template for files without one
         function generateTemplate(lines, eventName) {
-            if (!eventName) return { generatedTemplate: { title: '', description: '', settingBoxes: [] }, modifiedLines: [] };
+            if (!eventName) {
+                editedValues.title = '';
+                return { generatedTemplate: { title: '', description: '', settingBoxes: [] }, modifiedLines: [] };
+            }
 
             const settingBoxes = [];
             const modifiedLines = [...lines];
@@ -291,6 +295,9 @@
                     }
                 }
             }
+
+            // Update editedValues.title
+            editedValues.title = eventName;
 
             // Include description in generated template
             const generatedLines = [
@@ -506,7 +513,7 @@
                 }
 
                 const newTemplateLines = [
-                    `テンプレート定義\t${editedValues.title || 'Unnamed Template'}`,
+                    `テンプレート定義\t${editedValues.title || ''}`,
                     `\t設定ボックス\t説明文`,
                     `\t\tデフォルト文字列\t${editedValues.description || ''}`,
                     `\t設定ボックス終了`,
