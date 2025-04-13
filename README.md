@@ -3,8 +3,9 @@
 - Exporting with changes
 - Importing custom events (partial) without a template, generating templates based on comments in the event
 
-# Tested
+# Tested parameter generation types from an exported event
 - Item variable
+- Money
 - EventSheet graphics (using G#keywords)
 
 # Usage:
