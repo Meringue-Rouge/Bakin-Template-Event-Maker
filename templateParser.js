@@ -6,7 +6,8 @@ export function parseTemplate(lines) {
     let inSheet = false, sheetName = '', graphicGuid = '', motion = '';
     const graphicKeywords = new Map();
     const itemKeywords = new Map();
-    const messageKeywords = new Map(); // New map for MESSAGE keywords
+    const messageKeywords = new Map();
+    const moveKeywords = new Map(); // New map for MOVE/PLMOVE keywords
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -62,7 +63,6 @@ export function parseTemplate(lines) {
                             });
                             logDebug(`Found #${keyword} for IFITEM in sheet ${sheetName}`);
                         } else if (i + 3 < lines.length && lines[i + 2].trim().startsWith('コマンド\tMESSAGE')) {
-                            // Extract message text from the next MESSAGE command
                             const messageLine = lines[i + 3].trim();
                             const messageText = messageLine.startsWith('文字列') 
                                 ? messageLine.replace('文字列', '').trim() 
@@ -72,6 +72,23 @@ export function parseTemplate(lines) {
                                 string: messageText
                             });
                             logDebug(`Found #${keyword} for MESSAGE in sheet ${sheetName} with text: ${messageText}`);
+                        } else if (i + 3 < lines.length && (lines[i + 2].trim().startsWith('コマンド\tPLMOVE') || lines[i + 2].trim().startsWith('コマンド\tMOVE'))) {
+                            const commandType = lines[i + 2].trim().startsWith('コマンド\tPLMOVE') ? 'PLMOVE' : 'MOVE';
+                            let spot = '', orientation = '0';
+                            for (let j = i + 3; j < lines.length && !lines[j].trim().startsWith('コマンド終了'); j++) {
+                                const subLine = lines[j].trim();
+                                if (subLine.startsWith('スポット')) {
+                                    spot = subLine.replace('スポット', '').trim();
+                                } else if (subLine.startsWith('整数') && !subLine.includes('Guid')) {
+                                    orientation = subLine.replace('整数', '').trim();
+                                }
+                            }
+                            moveKeywords.set(keyword, {
+                                desc: `${keyword} move`,
+                                spot,
+                                orientation
+                            });
+                            logDebug(`Found #${keyword} for ${commandType} in sheet ${sheetName} with spot: ${spot}, orientation: ${orientation}`);
                         }
                     }
                 }
@@ -101,6 +118,7 @@ export function parseTemplate(lines) {
             else if (line.startsWith('デフォルトGuid')) currentBox.defaultGuid = line.replace('デフォルトGuid', '').trim();
             else if (line.startsWith('デフォルト文字列')) currentBox.defaultString = line.replace('デフォルト文字列', '').trim();
             else if (line.startsWith('デフォルト整数')) currentBox.defaultInteger = line.replace('デフォルト整数', '').trim();
+            else if (line.startsWith('オプション')) currentBox.option = line.replace('オプション', '').trim();
         }
         if (line.startsWith('設定ボックス終了') && currentBox) {
             if (currentBox.category === '説明文') description = currentBox.defaultString || '';
@@ -185,6 +203,53 @@ export function parseTemplate(lines) {
             type: 'MESSAGE'
         };
         logDebug(`Added message template for keyword ${keyword} with text: ${string}`);
+    });
+
+    // Add move template boxes for #keywords (MOVE/PLMOVE)
+    moveKeywords.forEach(({ desc, spot, orientation }, keyword) => {
+        // Map position box
+        const mapPosBox = {
+            id: `${keyword}-mappos`,
+            desc: `${keyword} move destination`,
+            defaultGuid: '',
+            defaultString: spot,
+            defaultInteger: '',
+            category: 'マップ座標',
+            type: 'MAP_POSITION'
+        };
+        settingBoxes.push(mapPosBox);
+        editedValues.settings[`${keyword}-mappos`] = {
+            id: `${keyword}-mappos`,
+            desc: mapPosBox.desc,
+            guid: '',
+            string: spot,
+            int: '',
+            type: 'MAP_POSITION'
+        };
+        logDebug(`Added map position template for keyword ${keyword}-mappos with spot: ${spot}`);
+
+        // Orientation box
+        const orientationBox = {
+            id: `${keyword}-orientation`,
+            desc: `${keyword} move orientation`,
+            defaultGuid: '',
+            defaultString: '',
+            defaultInteger: orientation,
+            category: '方向',
+            type: 'ORIENTATION',
+            option: '変更しないを追加'
+        };
+        settingBoxes.push(orientationBox);
+        editedValues.settings[`${keyword}-orientation`] = {
+            id: `${keyword}-orientation`,
+            desc: orientationBox.desc,
+            guid: '',
+            string: '',
+            int: orientation,
+            type: 'ORIENTATION',
+            option: '変更しないを追加'
+        };
+        logDebug(`Added orientation template for keyword ${keyword}-orientation with value: ${orientation}`);
     });
 
     // Store parsed settings in editedValues

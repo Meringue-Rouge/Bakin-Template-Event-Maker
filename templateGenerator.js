@@ -13,9 +13,10 @@ export function generateTemplate(lines, eventName) {
     const graphicKeywords = new Map();
     const itemKeywords = new Map();
     const switchKeywords = new Map();
-    const messageKeywords = new Map(); // New map for MESSAGE keywords
+    const messageKeywords = new Map();
+    const moveKeywords = new Map(); // New map for MOVE/PLMOVE keywords
 
-    // First pass: Apply replacements for items, switches, graphics, and messages
+    // First pass: Apply replacements for items, switches, graphics, messages, and moves
     for (let i = 0; i < modifiedLines.length; i++) {
         let line = modifiedLines[i].trim();
         if (line.startsWith('シート')) {
@@ -91,6 +92,7 @@ export function generateTemplate(lines, eventName) {
                             isItem: false,
                             isSwitch: false,
                             isMessage: false,
+                            isMove: false,
                             lineIndex: i
                         };
                     }
@@ -138,7 +140,7 @@ export function generateTemplate(lines, eventName) {
                 lastComment = null;
                 continue;
             }
-            if (line.startsWith('コマンド\tSWITCH') || line.startsWith('コマンド\tIFSWITCH')) {
+            if (line.startsWith('コマンド\tSWITCH') || line.startsWith('コマンド\tIF [email protected]@IFSWITCH')) {
                 logDebug(`Detected ${line.startsWith('コマンド\tSWITCH') ? 'SWITCH' : 'IFSWITCH'} after #${lastComment.id} at line ${i + 1}`);
                 lastComment.isSwitch = true;
                 if (!switchKeywords.has(lastComment.id)) {
@@ -180,9 +182,8 @@ export function generateTemplate(lines, eventName) {
                 logDebug(`Detected MESSAGE after #${lastComment.id} at line ${i + 1}`);
                 lastComment.isMessage = true;
                 if (!messageKeywords.has(lastComment.id)) {
-                    // Extract message text
                     let messageText = '';
-                    for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
+                    for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().StartsWith('コマンド終了'); j++) {
                         if (modifiedLines[j].trim().startsWith('文字列')) {
                             messageText = modifiedLines[j].replace('文字列', '').trim();
                             const prefix = modifiedLines[j].match(/^\t*/)[0];
@@ -214,6 +215,77 @@ export function generateTemplate(lines, eventName) {
                         type: 'MESSAGE'
                     };
                     logDebug(`Added message template for keyword ${lastComment.id} with text: ${messageText}`);
+                }
+                lastComment = null;
+                continue;
+            }
+            if (line.startsWith('コマンド\tPLMOVE') || line.startsWith('コマンド\tMOVE')) {
+                const commandType = line.startsWith('コマンド\tPLMOVE') ? 'PLMOVE' : 'MOVE';
+                logDebug(`Detected ${commandType} after #${lastComment.id} at line ${i + 1}`);
+                lastComment.isMove = true;
+                if (!moveKeywords.has(lastComment.id)) {
+                    let spot = '', orientation = '0';
+                    for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
+                        const subLine = modifiedLines[j].trim();
+                        if (subLine.startsWith('スポット')) {
+                            spot = subLine.replace('スポット', '').trim();
+                            const prefix = modifiedLines[j].match(/^\t*/)[0];
+                            modifiedLines[j] = `${prefix}スポット\t|文字列|${lastComment.id}-mappos|`;
+                            logDebug(`Updated ${commandType} スポット to |文字列|${lastComment.id}-mappos| at line ${j + 1}`);
+                        } else if (subLine.startsWith('整数') && !subLine.includes('Guid')) {
+                            orientation = subLine.replace('整数', '').trim();
+                            const prefix = modifiedLines[j].match(/^\t*/)[0];
+                            modifiedLines[j] = `${prefix}整数\t|整数|${lastComment.id}-orientation|`;
+                            logDebug(`Updated ${commandType} 整数 to |整数|${lastComment.id}-orientation| at line ${j + 1}`);
+                        }
+                    }
+                    moveKeywords.set(lastComment.id, {
+                        desc: `${lastComment.id} move`,
+                        spot,
+                        orientation
+                    });
+                    // Map position box
+                    const mapPosBox = {
+                        id: `${lastComment.id}-mappos`,
+                        desc: `${lastComment.id} move destination`,
+                        defaultGuid: '',
+                        defaultString: spot,
+                        defaultInteger: '',
+                        category: 'マップ座標',
+                        type: 'MAP_POSITION'
+                    };
+                    settingBoxes.push(mapPosBox);
+                    editedValues.settings[`${lastComment.id}-mappos`] = {
+                        id: `${lastComment.id}-mappos`,
+                        desc: mapPosBox.desc,
+                        guid: '',
+                        string: spot,
+                        int: '',
+                        type: 'MAP_POSITION'
+                    };
+                    logDebug(`Added map position template for keyword ${lastComment.id}-mappos with spot: ${spot}`);
+                    // Orientation box
+                    const orientationBox = {
+                        id: `${lastComment.id}-orientation`,
+                        desc: `${lastComment.id} move orientation`,
+                        defaultGuid: '',
+                        defaultString: '',
+                        defaultInteger: orientation,
+                        category: '方向',
+                        type: 'ORIENTATION',
+                        option: '変更しないを追加'
+                    };
+                    settingBoxes.push(orientationBox);
+                    editedValues.settings[`${lastComment.id}-orientation`] = {
+                        id: `${lastComment.id}-orientation`,
+                        desc: orientationBox.desc,
+                        guid: '',
+                        string: '',
+                        int: orientation,
+                        type: 'ORIENTATION',
+                        option: '変更しないを追加'
+                    };
+                    logDebug(`Added orientation template for keyword ${lastComment.id}-orientation with value: ${orientation}`);
                 }
                 lastComment = null;
                 continue;
@@ -267,6 +339,19 @@ export function generateTemplate(lines, eventName) {
             `\t\t設定ID\t${keyword}`,
             `\t\t説明\t${desc}`,
             `\t\tデフォルト文字列\t${string}`,
+            `\t設定ボックス終了`
+        ].join('\n')) : []),
+        ...(moveKeywords.size ? Array.from(moveKeywords.entries()).map(([keyword, { desc, spot, orientation }]) => [
+            `\t設定ボックス\tマップ座標`,
+            `\t\t設定ID\t${keyword}-mappos`,
+            `\t\t説明\t${desc} destination`,
+            `\t\tデフォルト文字列\t${spot}`,
+            `\t設定ボックス終了`,
+            `\t設定ボックス\t方向`,
+            `\t\t設定ID\t${keyword}-orientation`,
+            `\t\t説明\t${desc} orientation`,
+            `\t\tデフォルト整数\t${orientation}`,
+            `\t\tオプション\t変更しないを追加`,
             `\t設定ボックス終了`
         ].join('\n')) : []),
         `テンプレート定義終了`

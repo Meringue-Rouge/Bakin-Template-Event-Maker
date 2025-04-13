@@ -70,5 +70,23 @@ function renderInput(type, box) {
             <input type="number" id="int-input-${box.id}" value="${box.defaultInteger || '0'}" onchange="updateField('settings.${box.id}.int', this.value)">
         `;
     }
+    if (type === 'MAP_POSITION') {
+        html += `
+            <label for="string-input-${box.id}">Destination Spot:</label>
+            <input type="text" id="string-input-${box.id}" value="${box.defaultString || ''}" onchange="updateField('settings.${box.id}.string', this.value)">
+        `;
+    }
+    if (type === 'ORIENTATION') {
+        html += `
+            <label for="int-input-${box.id}">Orientation:</label>
+            <select id="int-input-${box.id}" onchange="updateField('settings.${box.id}.int', this.value)">
+                <option value="-1" ${box.defaultInteger === '-1' ? 'selected' : ''}>No Change</option>
+                <option value="0" ${box.defaultInteger === '0' ? 'selected' : ''}>Up</option>
+                <option value="1" ${box.defaultInteger === '1' ? 'selected' : ''}>Right</option>
+                <option value="2" ${box.defaultInteger === '2' ? 'selected' : ''}>Down</option>
+                <option value="3" ${box.defaultInteger === '3' ? 'selected' : ''}>Left</option>
+            </select>
+        `;
+    }
     return html;
 }

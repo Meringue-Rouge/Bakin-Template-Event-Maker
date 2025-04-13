@@ -28,7 +28,9 @@ const typeMap = {
     'バトル背景': 'BATTLE BACKGROUND',
     '説明文': 'DESCRIPTION',
     '数値': 'INTEGER',
-    'スイッチ': 'SWITCH'
+    'スイッチ': 'SWITCH',
+    'マップ座標': 'MAP_POSITION',
+    '方向': 'ORIENTATION'
 };
 
 // Command to template type mapping
@@ -38,7 +40,9 @@ const commandTypeMap = {
     'GRAPHIC': 'GRAPHICAL',
     'DIALOGUE': 'MESSAGE',
     'MONEY': 'INTEGER',
-    'BOSSBATTLE': 'MONSTER'
+    'BOSSBATTLE': 'MONSTER',
+    'MOVE': 'MAP_POSITION', // Maps to MAP_POSITION for template generation
+    'PLMOVE': 'MAP_POSITION' // Maps to MAP_POSITION for template generation
 };
 
 // Export utilities
