@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>RPG Bakin Template Simulator</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code&display=swap" rel="stylesheet">
+</head>
+<body>
+    <h1>Upload RPG Bakin Template</h1>
+    <div class="help-section" id="helpSection">
+        <h2>Help <span></span></h2>
+        <div class="help-content">
+            <p>This will let you convert any map event or common event into a Template Event, which can then be adjusted on the fly with parameters from the map. This will let you make more personalized events like a custom treasure chest event / door, without having to manually change every variable inside the event.</p>
+            <h3>How to Use:</h3>
+            <ul>
+                <li>Create your event in Bakin as either a Map Event or Common Event. Test it out first to see if it is working as intended.</li>
+                <li>Before exporting the event into a TXT file, you'll need to create "Note" (Comment) events just above the line of your event that you want the user to be able to modify through the UI. The text inside the comment must be formatted as #keyword, with keyword being anything you want. Only one comment per event line.</li>
+                <li>If you create two comments with two different keywords for two different lines, it'll create two parameters in the UI.</li>
+                <li>However, if you create two comments for two different lines but with the same keyword, it'll share the same UI for both those fields.</li>
+                <li>Only in normal event sheets (not parallel sheets), you can create a comment line with G#keyword, keyword being the keyword of your choice, to allow the user to change the model/graphics of the event sheet. This only applies to the sheet it's on, share the same keyword on another sheet to replace multiple, use a different keyword to let the user change more than one event sheet graphic, etc.</li>
+                <li>When everything's OK, export the txt and upload it on this website.</li>
+                <li>Double-check that all the events are parsed with your keyword (same keywords only result in one field, this is normal).</li>
+                <li>Fill in some descriptions, names, default GUIDs for graphics, etc.</li>
+                <li>Before exporting the file, fill in the name and give it an ID over 090000. You can't have files with the same ID.</li>
+                <li>Export and open your Bakin's Steamapps folder, located where your steam install is at.</li>
+                <li>Go to Steam\steamapps\common\BAKIN\data\en if you use an English version of Bakin, or Steam\steamapps\common\BAKIN\data\jp for a Japanese version.</li>
+                <li>For common events, drop it in the common_templates folder.</li>
+                <li>For a map event, drop it in the templates folder.</li>
+                <li>Make sure to add a bmp file with the exact same name as your txt file. Make a duplicate of one of the defaults in the same folder and rename it if you don't have one.</li>
+                <li>Close Bakin entirely and then open a game project.</li>
+                <li>For common events, it'll appear at the bottom when creating a standard common event. For a map event, it'll show up in a Event folder in the Events tab of placable entities.</li>
+            </ul>
+        </div>
+    </div>
+    <input type="file" id="fileInput" accept=".txt">
+    <div id="template-display"></div>
+    <div id="exportSection" class="export-section">
+        <label for="filenameId" class="filename-input">Filename ID (min 090000):</label>
+        <label for="filenameString" class="filename-input">Filename String:</label>
+        <input type="number" id="filenameId" value="090000" min="90000" class="filename-input">
+        <input type="text" id="filenameString" placeholder="e.g., ending" class="filename-input">
+        <button id="exportButton">Export File</button>
+    </div>
+    <div id="debug"></div>
+
+    <script type="module" src="utils.js"></script>
+    <script type="module" src="templateParser.js"></script>
+    <script type="module" src="templateGenerator.js"></script>
+    <script type="module" src="uiRenderer.js"></script>
+    <script type="module" src="main.js"></script>
+</body>
+</html>
