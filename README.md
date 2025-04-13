@@ -1,3 +1,6 @@
+**Use the tool here:**
+https://meringue-rouge.github.io/Bakin-Template-Event-Maker/
+
 # What's working:
 - Parsing default templates (not fully complete)
 - Exporting with changes
