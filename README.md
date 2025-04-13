@@ -11,6 +11,7 @@ https://meringue-rouge.github.io/Bakin-Template-Event-Maker/
 - Switches (toggle on/off an existing global or cross-save switch, and "check for switch" event)
 - Money (add or subtract money)
 - EventSheet graphics (using G#keywords, one per non-parallel sheet that you wish to change the graphics for)
+- Teleport Player/Event (for events, leave it on "This Event" for the target, otherwise it'll teleport the GUID associated to the event)
 
 # Usage:
 - Create an event in Bakin.
