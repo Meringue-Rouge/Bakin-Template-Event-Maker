@@ -12,9 +12,10 @@ export function generateTemplate(lines, eventName) {
     let sheetName = '', graphicGuid = '', motion = '';
     const graphicKeywords = new Map();
     const itemKeywords = new Map();
-    const switchKeywords = new Map(); // For SWITCH and IFSWITCH
+    const switchKeywords = new Map();
+    const messageKeywords = new Map(); // New map for MESSAGE keywords
 
-    // First pass: Apply replacements for items, switches, and ifswitches
+    // First pass: Apply replacements for items, switches, graphics, and messages
     for (let i = 0; i < modifiedLines.length; i++) {
         let line = modifiedLines[i].trim();
         if (line.startsWith('シート')) {
@@ -89,6 +90,7 @@ export function generateTemplate(lines, eventName) {
                             isGraphic: false,
                             isItem: false,
                             isSwitch: false,
+                            isMessage: false,
                             lineIndex: i
                         };
                     }
@@ -133,7 +135,7 @@ export function generateTemplate(lines, eventName) {
                         break;
                     }
                 }
-                lastComment = null; // Clear after IFITEM
+                lastComment = null;
                 continue;
             }
             if (line.startsWith('コマンド\tSWITCH') || line.startsWith('コマンド\tIFSWITCH')) {
@@ -171,7 +173,49 @@ export function generateTemplate(lines, eventName) {
                         break;
                     }
                 }
-                lastComment = null; // Clear after SWITCH/IFSWITCH
+                lastComment = null;
+                continue;
+            }
+            if (line.startsWith('コマンド\tMESSAGE')) {
+                logDebug(`Detected MESSAGE after #${lastComment.id} at line ${i + 1}`);
+                lastComment.isMessage = true;
+                if (!messageKeywords.has(lastComment.id)) {
+                    // Extract message text
+                    let messageText = '';
+                    for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
+                        if (modifiedLines[j].trim().startsWith('文字列')) {
+                            messageText = modifiedLines[j].replace('文字列', '').trim();
+                            const prefix = modifiedLines[j].match(/^\t*/)[0];
+                            modifiedLines[j] = `${prefix}文字列\t|文字列|${lastComment.id}|`;
+                            logDebug(`Updated MESSAGE 文字列 to |文字列|${lastComment.id}| at line ${j + 1}`);
+                            break;
+                        }
+                    }
+                    messageKeywords.set(lastComment.id, {
+                        desc: `${lastComment.id} message`,
+                        string: messageText
+                    });
+                    const box = {
+                        id: lastComment.id,
+                        desc: `${lastComment.id} message`,
+                        defaultGuid: '',
+                        defaultString: messageText,
+                        defaultInteger: '',
+                        category: '文章',
+                        type: 'MESSAGE'
+                    };
+                    settingBoxes.push(box);
+                    editedValues.settings[lastComment.id] = {
+                        id: lastComment.id,
+                        desc: box.desc,
+                        guid: '',
+                        string: messageText,
+                        int: '',
+                        type: 'MESSAGE'
+                    };
+                    logDebug(`Added message template for keyword ${lastComment.id} with text: ${messageText}`);
+                }
+                lastComment = null;
                 continue;
             }
             if (lastComment.isGraphic) {
@@ -216,6 +260,13 @@ export function generateTemplate(lines, eventName) {
             `\t設定ボックス\tスイッチ`,
             `\t\t設定ID\t${keyword}`,
             `\t\t説明\t${desc}`,
+            `\t設定ボックス終了`
+        ].join('\n')) : []),
+        ...(messageKeywords.size ? Array.from(messageKeywords.entries()).map(([keyword, { desc, string }]) => [
+            `\t設定ボックス\t文章`,
+            `\t\t設定ID\t${keyword}`,
+            `\t\t説明\t${desc}`,
+            `\t\tデフォルト文字列\t${string}`,
             `\t設定ボックス終了`
         ].join('\n')) : []),
         `テンプレート定義終了`

@@ -52,10 +52,49 @@ function exportFile() {
         const newTemplateLines = [
             `テンプレート定義\t${editedValues.title || 'Default Title'}`, // Include title
             `\t設定ボックス\t説明文`,
-            `\t\tデフォルト文字列\t${editedValues.description || 'Default Description'}`, // Include description
-            `\t設定ボックス終了`,
-            `テンプレート定義終了`
+            `\t\tデフォルト文字列\t${editedValues.description || ''}`, // Include description
+            `\t設定ボックス終了`
         ];
+
+        // Add setting boxes from editedValues.settings
+        Object.entries(editedValues.settings).forEach(([keyword, settings]) => {
+            if (settings.type === 'GRAPHICAL') {
+                newTemplateLines.push(
+                    `\t設定ボックス\tキャラクターグラフィック`,
+                    `\t\t設定ID\t${keyword}`,
+                    `\t\t説明\t${settings.desc || `${keyword} graphic`}`,
+                    `\t\tデフォルトGuid\t${settings.guid || ''}`,
+                    `\t\tデフォルト文字列\t${settings.string || ''}`,
+                    `\t設定ボックス終了`
+                );
+            } else if (settings.type === 'ITEM') {
+                newTemplateLines.push(
+                    `\t設定ボックス\tアイテム`,
+                    `\t\t設定ID\t${keyword}`,
+                    `\t\t説明\t${settings.desc || `${keyword} item`}`,
+                    `\t\tデフォルトGuid\t${settings.guid || ''}`,
+                    `\t設定ボックス終了`
+                );
+            } else if (settings.type === 'SWITCH') {
+                newTemplateLines.push(
+                    `\t設定ボックス\tスイッチ`,
+                    `\t\t設定ID\t${keyword}`,
+                    `\t\t説明\t${settings.desc || `${keyword} switch`}`,
+                    `\t設定ボックス終了`
+                );
+            } else if (settings.type === 'MESSAGE') {
+                newTemplateLines.push(
+                    `\t設定ボックス\t文章`,
+                    `\t\t設定ID\t${keyword}`,
+                    `\t\t説明\t${settings.desc || `${keyword} message`}`,
+                    `\t\tデフォルト文字列\t${settings.string || ''}`,
+                    `\t設定ボックス終了`
+                );
+            }
+            // Add other types as needed
+        });
+
+        newTemplateLines.push(`テンプレート定義終了`);
 
         // Replace or insert template section
         let templateStartIndex = -1, templateEndIndex = -1;
@@ -105,7 +144,6 @@ function exportFile() {
     }
 }
 
-// Update setting box
 function updateSettingBox(lines, boxLines, startIndex, idMapping) {
     let settingId = '', newSettingId = '';
     let indices = { guid: -1, string: -1, desc: -1, int: -1, id: -1 };
@@ -131,12 +169,25 @@ function updateSettingBox(lines, boxLines, startIndex, idMapping) {
     if (settingId === '説明' && editedValues.description && indices.string !== -1) {
         lines[indices.string] = `\tデフォルト文字列\t${editedValues.description}`;
     } else {
-        if (settings.guid && indices.guid !== -1 && settings.type !== 'ITEM') lines[indices.guid] = `\tデフォルトGuid\t${settings.guid}`;
-        if (settings.desc && indices.desc !== -1) lines[indices.desc] = `\t説明\t${settings.desc}`;
-        if (settings.string && indices.string !== -1) lines[indices.string] = `\tデフォルト文字列\t${settings.string}`;
-        if (settings.int && indices.int !== -1) lines[indices.int] = `\tデフォルト整数\t${settings.int}`;
+        if (settings.guid && indices.guid !== -1 && settings.type !== 'ITEM') {
+            lines[indices.guid] = `\tデフォルトGuid\t${settings.guid}`;
+            logDebug(`Updated GUID for ${settingId} at line ${indices.guid + 1}`);
+        }
+        if (settings.desc && indices.desc !== -1) {
+            lines[indices.desc] = `\t説明\t${settings.desc}`;
+            logDebug(`Updated description for ${settingId} at line ${indices.desc + 1}`);
+        }
+        if (settings.string && indices.string !== -1 && settings.type !== 'MESSAGE') {
+            lines[indices.string] = `\tデフォルト文字列\t${settings.string}`;
+            logDebug(`Updated string for ${settingId} at line ${indices.string + 1}`);
+        }
+        if (settings.int && indices.int !== -1) {
+            lines[indices.int] = `\tデフォルト整数\t${settings.int}`;
+            logDebug(`Updated integer for ${settingId} at line ${indices.int + 1}`);
+        }
     }
 }
+
 
 // Attach event listeners
 document.getElementById('exportButton').addEventListener('click', exportFile);

@@ -6,6 +6,7 @@ export function parseTemplate(lines) {
     let inSheet = false, sheetName = '', graphicGuid = '', motion = '';
     const graphicKeywords = new Map();
     const itemKeywords = new Map();
+    const messageKeywords = new Map(); // New map for MESSAGE keywords
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -53,12 +54,25 @@ export function parseTemplate(lines) {
                     }
                 } else if (comment.startsWith('#')) {
                     const keyword = comment.slice(1).split(/\s+/)[0];
-                    if (keyword && i + 3 < lines.length && lines[i + 2].trim().startsWith('コマンド\tIFITEM')) {
-                        itemKeywords.set(keyword, {
-                            guid: '',
-                            desc: `${keyword} item`
-                        });
-                        logDebug(`Found #${keyword} for IFITEM in sheet ${sheetName}`);
+                    if (keyword) {
+                        if (i + 3 < lines.length && lines[i + 2].trim().startsWith('コマンド\tIFITEM')) {
+                            itemKeywords.set(keyword, {
+                                guid: '',
+                                desc: `${keyword} item`
+                            });
+                            logDebug(`Found #${keyword} for IFITEM in sheet ${sheetName}`);
+                        } else if (i + 3 < lines.length && lines[i + 2].trim().startsWith('コマンド\tMESSAGE')) {
+                            // Extract message text from the next MESSAGE command
+                            const messageLine = lines[i + 3].trim();
+                            const messageText = messageLine.startsWith('文字列') 
+                                ? messageLine.replace('文字列', '').trim() 
+                                : '';
+                            messageKeywords.set(keyword, {
+                                desc: `${keyword} message`,
+                                string: messageText
+                            });
+                            logDebug(`Found #${keyword} for MESSAGE in sheet ${sheetName} with text: ${messageText}`);
+                        }
                     }
                 }
             }
@@ -148,6 +162,29 @@ export function parseTemplate(lines) {
             type: 'ITEM'
         };
         logDebug(`Added item template for keyword ${keyword}`);
+    });
+
+    // Add message template boxes for #keywords (MESSAGE)
+    messageKeywords.forEach(({ desc, string }, keyword) => {
+        const box = {
+            id: keyword,
+            desc: desc,
+            defaultGuid: '',
+            defaultString: string,
+            defaultInteger: '',
+            category: '文章',
+            type: 'MESSAGE'
+        };
+        settingBoxes.push(box);
+        editedValues.settings[keyword] = {
+            id: keyword,
+            desc: box.desc,
+            guid: '',
+            string: string,
+            int: '',
+            type: 'MESSAGE'
+        };
+        logDebug(`Added message template for keyword ${keyword} with text: ${string}`);
     });
 
     // Store parsed settings in editedValues
