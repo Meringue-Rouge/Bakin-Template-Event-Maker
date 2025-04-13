@@ -38,7 +38,6 @@ document.getElementById('fileInput').addEventListener('change', function(event) 
     reader.readAsText(file);
 });
 
-// Export file
 function exportFile() {
     if (!originalLines.length) {
         logDebug('No original lines to export');
@@ -48,118 +47,15 @@ function exportFile() {
 
     try {
         let modifiedLines = [...originalLines];
-        const idMapping = {};
-
-        // Apply IFITEM replacements
-        let inScript = false, lastComment = null;
-        for (let i = 0; i < modifiedLines.length; i++) {
-            let line = modifiedLines[i].trim();
-            if (line.startsWith('スクリプト')) {
-                inScript = true;
-                continue;
-            }
-            if (line.startsWith('スクリプト終了')) {
-                inScript = false;
-                lastComment = null;
-                continue;
-            }
-            if (inScript && line.startsWith('コマンド\tCOMMENT')) {
-                if (i + 1 < modifiedLines.length && modifiedLines[i + 1].trim().startsWith('文字列')) {
-                    const comment = modifiedLines[i + 1].replace('文字列', '').trim();
-                    if (comment.startsWith('#')) {
-                        const keyword = comment.slice(1).split(/\s+/)[0];
-                        if (keyword) {
-                            lastComment = {
-                                id: keyword,
-                                isItem: true
-                            };
-                        }
-                    }
-                    continue;
-                }
-            }
-            if (inScript && lastComment && line.startsWith('コマンド\tIFITEM')) {
-                for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
-                    if (modifiedLines[j].trim().startsWith('Guid')) {
-                        const prefix = modifiedLines[j].match(/^\t*/)[0];
-                        modifiedLines[j] = `${prefix}Guid\t|Guid|${lastComment.id}|`;
-                        logDebug(`Updated IFITEM Guid to |Guid|${lastComment.id}| at line ${j + 1}`);
-                        break;
-                    }
-                }
-                lastComment = null;
-                continue;
-            }
-        }
-
-        // Update existing setting boxes and track ID changes
-        let inSettingBox = false, settingBoxLines = [], settingBoxStartIndex = -1;
-        for (let i = 0; i < modifiedLines.length; i++) {
-            let line = modifiedLines[i].trim();
-            if (line.startsWith('設定ボックス')) {
-                if (inSettingBox && settingBoxLines.length) {
-                    updateSettingBox(modifiedLines, settingBoxLines, settingBoxStartIndex, idMapping);
-                }
-                inSettingBox = true;
-                settingBoxLines = [];
-                settingBoxStartIndex = i;
-            }
-            if (inSettingBox) settingBoxLines.push(modifiedLines[i]);
-            if (line.startsWith('設定ボックス終了')) {
-                updateSettingBox(modifiedLines, settingBoxLines, settingBoxStartIndex, idMapping);
-                inSettingBox = false;
-                settingBoxLines = [];
-            }
-        }
-
-        // Update ID references
-        for (let i = 0; i < modifiedLines.length; i++) {
-            let line = modifiedLines[i];
-            for (const [oldId, newId] of Object.entries(idMapping)) {
-                ['Guid', '文字列', '整数', '表情'].forEach(type => {
-                    const pattern = `|${type}|${oldId}|`;
-                    if (line.includes(pattern)) {
-                        modifiedLines[i] = line.replace(pattern, `|${type}|${newId}|`);
-                        logDebug(`Replaced ${pattern} with |${type}|${newId}| at line ${i + 1}`);
-                    }
-                });
-            }
-        }
 
         // Generate updated template section
-        const settingBoxes = [];
-        for (const id in editedValues.settings) {
-            const setting = editedValues.settings[id];
-            if (setting.id && setting.type && setting.type !== 'DESCRIPTION') {
-                const category = Object.keys(typeMap).find(key => typeMap[key] === setting.type) || 'UNKNOWN';
-                settingBoxes.push({
-                    id: setting.id,
-                    desc: setting.desc || '',
-                    defaultGuid: setting.guid || '',
-                    defaultString: setting.string || '',
-                    defaultInteger: setting.int || '',
-                    category: category,
-                    type: setting.type
-                });
-            }
-        }
-
         const newTemplateLines = [
-            `テンプレート定義\t${editedValues.title || ''}`,
+            `テンプレート定義\t${editedValues.title || 'Default Title'}`, // Include title
             `\t設定ボックス\t説明文`,
-            `\t\tデフォルト文字列\t${editedValues.description || ''}`,
+            `\t\tデフォルト文字列\t${editedValues.description || 'Default Description'}`, // Include description
             `\t設定ボックス終了`,
-            ...(settingBoxes.length ? settingBoxes.map(box => [
-                `\t設定ボックス\t${box.category}`,
-                `\t\t設定ID\t${box.id}`,
-                `\t\t説明\t${box.desc}`,
-                ...(box.defaultGuid && box.type !== 'ITEM' ? [`\t\tデフォルトGuid\t${box.defaultGuid}`] : []),
-                ...(box.defaultString ? [`\t\tデフォルト文字列\t${box.defaultString}`] : []),
-                ...(box.defaultInteger ? [`\t\tデフォルト整数\t${box.defaultInteger}`] : []),
-                `\t設定ボックス終了`
-            ].join('\n')) : []),
             `テンプレート定義終了`
-        ].flat();
+        ];
 
         // Replace or insert template section
         let templateStartIndex = -1, templateEndIndex = -1;
