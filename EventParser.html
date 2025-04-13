@@ -362,7 +362,7 @@
             let hasTemplate = false, eventName = '';
             let inSheet = false, sheetName = '', graphicGuid = '', motion = '';
             const graphicKeywords = new Map();
-            const switchKeywords = new Map();
+            const itemKeywords = new Map();
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
@@ -410,12 +410,12 @@
                             }
                         } else if (comment.startsWith('#')) {
                             const keyword = comment.slice(1).split(/\s+/)[0];
-                            if (keyword && i + 3 < lines.length && (lines[i + 2].trim().startsWith('コマンド\tSWITCH') || lines[i + 2].trim().startsWith('コマンド\tIFSWITCH'))) {
-                                switchKeywords.set(keyword, {
-                                    value: '',
-                                    desc: `${keyword} switch`
+                            if (keyword && i + 3 < lines.length && lines[i + 2].trim().startsWith('コマンド\tIFITEM')) {
+                                itemKeywords.set(keyword, {
+                                    guid: '',
+                                    desc: `${keyword} item`
                                 });
-                                logDebug(`Found #${keyword} for SWITCH/IFSWITCH in sheet ${sheetName}`);
+                                logDebug(`Found #${keyword} for IFITEM in sheet ${sheetName}`);
                             }
                         }
                     }
@@ -484,27 +484,27 @@
                 logDebug(`Added graphic template for keyword ${keyword} from sheet ${sheetName}`);
             });
 
-            // Add switch template boxes for #keywords
-            switchKeywords.forEach(({ value, desc }, keyword) => {
+            // Add item template boxes for #keywords (IFITEM)
+            itemKeywords.forEach(({ guid, desc }, keyword) => {
                 const box = {
                     id: keyword,
                     desc: desc,
-                    defaultGuid: '',
-                    defaultString: value,
+                    defaultGuid: guid,
+                    defaultString: '',
                     defaultInteger: '',
-                    category: 'スイッチ',
-                    type: 'SWITCH'
+                    category: 'アイテム',
+                    type: 'ITEM'
                 };
                 settingBoxes.push(box);
                 editedValues.settings[keyword] = {
                     id: keyword,
                     desc: box.desc,
-                    guid: '',
-                    string: value,
+                    guid: guid,
+                    string: '',
                     int: '',
-                    type: 'SWITCH'
+                    type: 'ITEM'
                 };
-                logDebug(`Added switch template for keyword ${keyword}`);
+                logDebug(`Added item template for keyword ${keyword}`);
             });
 
             // Store parsed settings in editedValues
@@ -513,6 +513,7 @@
 
             return { title, description, settingBoxes, hasTemplate, eventName };
         }
+
 
 
         // Generate template for files without one
@@ -527,9 +528,9 @@
             let inScript = false, inSheet = false, lastComment = null, currentSheetStart = -1;
             let sheetName = '', graphicGuid = '', motion = '';
             const graphicKeywords = new Map();
-            const switchKeywords = new Map();
+            const itemKeywords = new Map();
 
-            // First pass: Apply switch replacements
+            // First pass: Apply item replacements
             for (let i = 0; i < modifiedLines.length; i++) {
                 let line = modifiedLines[i].trim();
                 if (line.startsWith('シート')) {
@@ -603,47 +604,49 @@
                                 lastComment = {
                                     id: keyword,
                                     isGraphic: false,
-                                    isSwitch: true,
+                                    isItem: true,
                                     lineIndex: i
                                 };
-                                if (!switchKeywords.has(keyword)) {
-                                    switchKeywords.set(keyword, {
-                                        value: '',
-                                        desc: `${keyword} switch`
+                                if (!itemKeywords.has(keyword)) {
+                                    itemKeywords.set(keyword, {
+                                        guid: '',
+                                        desc: `${keyword} item`
                                     });
                                     const box = {
                                         id: keyword,
-                                        desc: `${keyword} switch`,
+                                        desc: `${keyword} item`,
                                         defaultGuid: '',
                                         defaultString: '',
                                         defaultInteger: '',
-                                        category: 'スイッチ',
-                                        type: 'SWITCH'
+                                        category: 'アイテム',
+                                        type: 'ITEM'
                                     };
                                     settingBoxes.push(box);
                                     editedValues.settings[keyword] = {
                                         id: keyword,
                                         desc: box.desc,
+                                        guid: '',
                                         string: '',
-                                        type: 'SWITCH'
+                                        int: '',
+                                        type: 'ITEM'
                                     };
-                                    logDebug(`Added switch template for keyword ${keyword}`);
+                                    logDebug(`Added item template for keyword ${keyword}`);
                                 }
                             }
                         }
                         continue;
                     }
                 }
-                if (inScript && lastComment && (line.startsWith('コマンド\tSWITCH') || line.startsWith('コマンド\tIFSWITCH'))) {
+                if (inScript && lastComment && line.startsWith('コマンド\tIFITEM')) {
                     for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
-                        if (modifiedLines[j].trim().startsWith('変数')) {
+                        if (modifiedLines[j].trim().startsWith('Guid')) {
                             const prefix = modifiedLines[j].match(/^\t*/)[0];
-                            modifiedLines[j] = `${prefix}変数\t|文字列|${lastComment.id}|`;
-                            logDebug(`Updated ${line.startsWith('コマンド\tSWITCH') ? 'SWITCH' : 'IFSWITCH'} 変数 to |文字列|${lastComment.id}| at line ${j + 1}`);
+                            modifiedLines[j] = `${prefix}Guid\t|Guid|${lastComment.id}|`;
+                            logDebug(`Updated IFITEM Guid to |Guid|${lastComment.id}| at line ${j + 1}`);
                             break;
                         }
                     }
-                    lastComment = null; // Clear after SWITCH/IFSWITCH
+                    lastComment = null; // Clear after IFITEM
                     continue;
                 }
                 if (inScript && lastComment && !line.startsWith('コマンド\tCOMMENT')) {
@@ -656,33 +659,6 @@
                                 logDebug(`Updated グラフィック to |Guid|${lastComment.id}| at line ${j + 1}`);
                                 break;
                             }
-                        }
-                        lastComment = null;
-                    } else if (commandType === 'ITEM') {
-                        if (!settingBoxes.some(box => box.id === lastComment.id)) {
-                            const box = {
-                                id: lastComment.id,
-                                desc: editedValues.settings[lastComment.id]?.desc || '',
-                                defaultGuid: '',
-                                defaultString: '',
-                                defaultInteger: '',
-                                category: 'アイテム',
-                                type: 'ITEM'
-                            };
-                            if (i + 1 < modifiedLines.length && modifiedLines[i + 1].trim().startsWith('Guid')) {
-                                box.defaultGuid = modifiedLines[i + 1].replace('Guid', '').trim();
-                            }
-                            settingBoxes.push(box);
-                            editedValues.settings[box.id] = {
-                                id: box.id,
-                                desc: box.desc,
-                                type: box.type,
-                                guid: box.defaultGuid
-                            };
-                        }
-                        if (i + 1 < modifiedLines.length && modifiedLines[i + 1].trim().startsWith('Guid')) {
-                            modifiedLines[i + 1] = `\t\tGuid\t|Guid|${lastComment.id}|`;
-                            logDebug(`Updated ITEM Guid to |Guid|${lastComment.id}| at line ${i + 2}`);
                         }
                         lastComment = null;
                     }
@@ -703,20 +679,11 @@
                     `\t\tデフォルト文字列\t${motion}`,
                     `\t設定ボックス終了`
                 ].join('\n')) : []),
-                ...(switchKeywords.size ? Array.from(switchKeywords.entries()).map(([keyword, { desc, value }]) => [
-                    `\t設定ボックス\tスイッチ`,
+                ...(itemKeywords.size ? Array.from(itemKeywords.entries()).map(([keyword, { desc, guid }]) => [
+                    `\t設定ボックス\tアイテム`,
                     `\t\t設定ID\t${keyword}`,
                     `\t\t説明\t${desc}`,
-                    `\t\tデフォルト文字列\t${value}`,
-                    `\t設定ボックス終了`
-                ].join('\n')) : []),
-                ...(settingBoxes.filter(box => box.type !== 'GRAPHICAL' && box.type !== 'SWITCH').length ? settingBoxes.filter(box => box.type !== 'GRAPHICAL' && box.type !== 'SWITCH').map(box => [
-                    `\t設定ボックス\t${box.category}`,
-                    `\t\t設定ID\t${box.id}`,
-                    `\t\t説明\t${box.desc}`,
-                    ...(box.defaultGuid && box.type !== 'ITEM' ? [`\t\tデフォルトGuid\t${box.defaultGuid}`] : []),
-                    ...(box.defaultString ? [`\t\tデフォルト文字列\t${box.defaultString}`] : []),
-                    ...(box.defaultInteger ? [`\t\tデフォルト整数\t${box.defaultInteger}`] : []),
+                    `\t\tデフォルトGuid\t${guid}`,
                     `\t設定ボックス終了`
                 ].join('\n')) : []),
                 `テンプレート定義終了`
@@ -736,7 +703,6 @@
                 modifiedLines
             };
         }
-
 
 
         // Display template
@@ -819,7 +785,7 @@
                 let modifiedLines = [...originalLines];
                 const idMapping = {};
 
-                // Apply SWITCH and IFSWITCH replacements
+                // Apply IFITEM replacements
                 let inScript = false, lastComment = null;
                 for (let i = 0; i < modifiedLines.length; i++) {
                     let line = modifiedLines[i].trim();
@@ -840,19 +806,19 @@
                                 if (keyword) {
                                     lastComment = {
                                         id: keyword,
-                                        isSwitch: true
+                                        isItem: true
                                     };
                                 }
                             }
                             continue;
                         }
                     }
-                    if (inScript && lastComment && (line.startsWith('コマンド\tSWITCH') || line.startsWith('コマンド\tIFSWITCH'))) {
+                    if (inScript && lastComment && line.startsWith('コマンド\tIFITEM')) {
                         for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
-                            if (modifiedLines[j].trim().startsWith('変数')) {
+                            if (modifiedLines[j].trim().startsWith('Guid')) {
                                 const prefix = modifiedLines[j].match(/^\t*/)[0];
-                                modifiedLines[j] = `${prefix}変数\t|文字列|${lastComment.id}|`;
-                                logDebug(`Updated ${line.startsWith('コマンド\tSWITCH') ? 'SWITCH' : 'IFSWITCH'} 変数 to |文字列|${lastComment.id}| at line ${j + 1}`);
+                                modifiedLines[j] = `${prefix}Guid\t|Guid|${lastComment.id}|`;
+                                logDebug(`Updated IFITEM Guid to |Guid|${lastComment.id}| at line ${j + 1}`);
                                 break;
                             }
                         }
@@ -977,6 +943,7 @@
                 alert('Failed to export file. Check debug log for details.');
             }
         }
+
 
 
         // Update setting box
