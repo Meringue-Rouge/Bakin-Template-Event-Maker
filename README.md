@@ -1,10 +1,13 @@
+**Use the tool here:**
+https://meringue-rouge.github.io/Bakin-Template-Event-Maker/
+
 # What's working:
 - Parsing default templates (not fully complete)
 - Exporting with changes
 - Importing custom events (partial) without a template, generating templates based on comments in the event
 
 # Tested parameter generation types from an exported event
-- Items (parameter lets you select an item for events that give / take items)
+- Items (parameter lets you select an item for events that give / take items, and check for item in inventory)
 - Switches (toggle on/off an existing global or cross-save switch, and "check for switch" event)
 - Money (add or subtract money)
 - EventSheet graphics (using G#keywords, one per non-parallel sheet that you wish to change the graphics for)
