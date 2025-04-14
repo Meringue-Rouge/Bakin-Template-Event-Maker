@@ -14,9 +14,10 @@ export function generateTemplate(lines, eventName) {
     const itemKeywords = new Map();
     const switchKeywords = new Map();
     const messageKeywords = new Map();
-    const moveKeywords = new Map(); // Map for MOVE/PLMOVE keywords
+    const moveKeywords = new Map();
+    const usedGraphicKeywords = new Set(); // Track used G# keywords
+    const sheetGraphicUpdates = new Map(); // Track G# keywords per sheet for graphic replacement
 
-    // First pass: Apply replacements for items, switches, graphics, messages, and moves
     for (let i = 0; i < modifiedLines.length; i++) {
         let line = modifiedLines[i].trim();
         if (line.startsWith('シート')) {
@@ -55,18 +56,19 @@ export function generateTemplate(lines, eventName) {
                 const comment = modifiedLines[i + 1].replace('文字列', '').trim();
                 if (comment.startsWith('G#')) {
                     const keyword = comment.slice(2).split(/\s+/)[0];
-                    if (keyword && graphicGuid && motion) {
+                    if (keyword && graphicGuid && !usedGraphicKeywords.has(keyword)) {
+                        usedGraphicKeywords.add(keyword); // Mark keyword as used
                         graphicKeywords.set(keyword, {
                             sheetName,
                             guid: graphicGuid,
-                            motion
+                            motion: motion || '' // Use empty string if motion is missing
                         });
-                        logDebug(`Found G#${keyword} in sheet ${sheetName} with GUID ${graphicGuid} and motion ${motion}`);
+                        logDebug(`Found G#${keyword} in sheet ${sheetName} with GUID ${graphicGuid} and motion ${motion || 'none'}`);
                         const box = {
                             id: keyword,
                             desc: `${sheetName} graphic`,
                             defaultGuid: graphicGuid,
-                            defaultString: motion,
+                            defaultString: motion || '',
                             defaultInteger: '',
                             category: 'キャラクターグラフィック',
                             type: 'GRAPHICAL'
@@ -76,11 +78,16 @@ export function generateTemplate(lines, eventName) {
                             id: keyword,
                             desc: box.desc,
                             guid: graphicGuid,
-                            string: motion,
+                            string: motion || '',
                             int: '',
                             type: 'GRAPHICAL'
                         };
                         logDebug(`Added graphic template for keyword ${keyword} from sheet ${sheetName}`);
+                    }
+                    // Store G# keyword for this sheet to update グラフィック
+                    if (keyword && graphicGuid) {
+                        sheetGraphicUpdates.set(sheetName, { keyword, lineIndex: currentSheetStart + 1 }); // +1 for グラフィック line
+                        logDebug(`Scheduled グラフィック update for sheet ${sheetName} to |Guid|${keyword}|`);
                     }
                 } else if (comment.startsWith('#')) {
                     const keyword = comment.slice(1).split(/\s+/)[0];
@@ -101,8 +108,8 @@ export function generateTemplate(lines, eventName) {
             continue;
         }
         if (inScript && lastComment) {
-            if (line.startsWith('コマンド\tIFITEM')) {
-                logDebug(`Detected IFITEM after #${lastComment.id} at line ${i + 1}`);
+            if (line.startsWith('コマンド\tITEM') || line.startsWith('コマンド\tIFITEM')) {
+                logDebug(`Detected ITEM after #${lastComment.id} at line ${i + 1}`);
                 lastComment.isItem = true;
                 if (!itemKeywords.has(lastComment.id)) {
                     itemKeywords.set(lastComment.id, {
@@ -133,7 +140,7 @@ export function generateTemplate(lines, eventName) {
                     if (modifiedLines[j].trim().startsWith('Guid')) {
                         const prefix = modifiedLines[j].match(/^\t*/)[0];
                         modifiedLines[j] = `${prefix}Guid\t|Guid|${lastComment.id}|`;
-                        logDebug(`Updated IFITEM Guid to |Guid|${lastComment.id}| at line ${j + 1}`);
+                        logDebug(`Updated ITEM Guid to |Guid|${lastComment.id}| at line ${j + 1}`);
                         break;
                     }
                 }
@@ -244,7 +251,6 @@ export function generateTemplate(lines, eventName) {
                         spot,
                         orientation
                     });
-                    // Map position box
                     const mapPosBox = {
                         id: `${lastComment.id}-mappos`,
                         desc: `Select the Destination (right drag to scroll)`,
@@ -264,7 +270,6 @@ export function generateTemplate(lines, eventName) {
                         type: 'MAP_POSITION'
                     };
                     logDebug(`Added map position template for keyword ${lastComment.id}-mappos with spot: ${spot}`);
-                    // Orientation box
                     const orientationBox = {
                         id: `${lastComment.id}-orientation`,
                         desc: `Orientation After Movement`,
@@ -307,7 +312,14 @@ export function generateTemplate(lines, eventName) {
         }
     }
 
-    // Generate template lines
+    // Apply グラフィック updates for sheets with G# comments
+    sheetGraphicUpdates.forEach(({ keyword, lineIndex }, sheetName) => {
+        if (lineIndex >= 0 && lineIndex < modifiedLines.length) {
+            modifiedLines[lineIndex] = `\t\tグラフィック\t|Guid|${keyword}|`;
+            logDebug(`Updated グラフィック in sheet ${sheetName} to |Guid|${keyword}| at line ${lineIndex + 1}`);
+        }
+    });
+
     const generatedTemplateLines = [
         `テンプレート定義\t${eventName}`,
         `\t設定ボックス\t説明文`,
@@ -318,7 +330,7 @@ export function generateTemplate(lines, eventName) {
             `\t\t設定ID\t${keyword}`,
             `\t\t説明\t${sheetName} graphic`,
             `\t\tデフォルトGuid\t${guid}`,
-            `\t\tデフォルト文字列\t${motion}`,
+            ...(motion ? [`\t\tデフォルト文字列\t${motion}`] : []), // Only include motion if it exists
             `\t設定ボックス終了`
         ].join('\n')) : []),
         ...(itemKeywords.size ? Array.from(itemKeywords.entries()).map(([keyword, { desc, guid }]) => [
@@ -357,7 +369,6 @@ export function generateTemplate(lines, eventName) {
 
     logDebug(`Generated ${settingBoxes.length} setting boxes: ${JSON.stringify(settingBoxes)}`);
 
-    // Insert template at the appropriate position
     let insertIndex = modifiedLines.findIndex(line => line.trim().startsWith('イベント名'));
     if (insertIndex === -1) insertIndex = 0;
     modifiedLines.splice(insertIndex, 0, ...generatedTemplateLines);

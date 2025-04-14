@@ -1,4 +1,4 @@
-import { originalLines, editedValues, logDebug, typeMap } from './utils.js'; // Added typeMap
+import { originalLines, editedValues, logDebug, typeMap } from './utils.js';
 import { parseTemplate } from './templateParser.js';
 import { generateTemplate } from './templateGenerator.js';
 import { displayTemplate } from './uiRenderer.js';
@@ -64,7 +64,7 @@ function exportFile() {
                     `\t\t設定ID\t${keyword}`,
                     `\t\t説明\t${settings.desc || `${keyword} graphic`}`,
                     `\t\tデフォルトGuid\t${settings.guid || ''}`,
-                    `\t\tデフォルト文字列\t${settings.string || ''}`,
+                    ...(settings.string ? [`\t\tデフォルト文字列\t${settings.string}`] : []), // Only include if motion exists
                     `\t設定ボックス終了`
                 );
             } else if (settings.type === 'ITEM') {
@@ -72,7 +72,6 @@ function exportFile() {
                     `\t設定ボックス\tアイテム`,
                     `\t\t設定ID\t${keyword}`,
                     `\t\t説明\t${settings.desc || `${keyword} item`}`,
-                    `\t\tデフォルトGuid\t${settings.guid || ''}`,
                     `\t設定ボックス終了`
                 );
             } else if (settings.type === 'SWITCH') {
@@ -158,8 +157,6 @@ function exportFile() {
     }
 }
 
-
-
 function updateSettingBox(lines, boxLines, startIndex, idMapping) {
     let settingId = '', newSettingId = '';
     let indices = { guid: -1, string: -1, desc: -1, int: -1, id: -1 };
@@ -203,7 +200,6 @@ function updateSettingBox(lines, boxLines, startIndex, idMapping) {
         }
     }
 }
-
 
 // Attach event listeners
 document.getElementById('exportButton').addEventListener('click', exportFile);

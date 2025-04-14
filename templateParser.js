@@ -7,7 +7,8 @@ export function parseTemplate(lines) {
     const graphicKeywords = new Map();
     const itemKeywords = new Map();
     const messageKeywords = new Map();
-    const moveKeywords = new Map(); // New map for MOVE/PLMOVE keywords
+    const moveKeywords = new Map();
+    const usedGraphicKeywords = new Set(); // Track used G# keywords
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -45,13 +46,14 @@ export function parseTemplate(lines) {
                 const comment = lines[i + 1].replace('文字列', '').trim();
                 if (comment.startsWith('G#')) {
                     const keyword = comment.slice(2).split(/\s+/)[0];
-                    if (keyword && graphicGuid && motion) {
+                    if (keyword && graphicGuid && !usedGraphicKeywords.has(keyword)) {
+                        usedGraphicKeywords.add(keyword); // Mark keyword as used
                         graphicKeywords.set(keyword, {
                             sheetName,
                             guid: graphicGuid,
-                            motion
+                            motion: motion || '' // Use empty string if motion is missing
                         });
-                        logDebug(`Found G#${keyword} in sheet ${sheetName} with GUID ${graphicGuid} and motion ${motion}`);
+                        logDebug(`Found G#${keyword} in sheet ${sheetName} with GUID ${graphicGuid} and motion ${motion || 'none'}`);
                     }
                 } else if (comment.startsWith('#')) {
                     const keyword = comment.slice(1).split(/\s+/)[0];
@@ -95,6 +97,7 @@ export function parseTemplate(lines) {
             }
             continue;
         }
+        // ... (rest of the existing code for setting boxes remains unchanged)
         if (line.startsWith('設定ボックス')) {
             if (currentBox && (currentBox.id || currentBox.category === '説明文')) {
                 if (currentBox.category === '説明文') description = currentBox.defaultString || '';
@@ -136,13 +139,13 @@ export function parseTemplate(lines) {
         }
     }
 
-    // Add graphic template boxes for G#keywords
+    // Add graphic template boxes for G# keywords
     graphicKeywords.forEach(({ sheetName, guid, motion }, keyword) => {
         const box = {
             id: keyword,
             desc: `${sheetName} graphic`,
             defaultGuid: guid,
-            defaultString: motion,
+            defaultString: motion, // Motion can be empty
             defaultInteger: '',
             category: 'キャラクターグラフィック',
             type: 'GRAPHICAL'
@@ -159,7 +162,7 @@ export function parseTemplate(lines) {
         logDebug(`Added graphic template for keyword ${keyword} from sheet ${sheetName}`);
     });
 
-    // Add item template boxes for #keywords (IFITEM)
+    // ... (rest of the existing code for item, message, move templates remains unchanged)
     itemKeywords.forEach(({ guid, desc }, keyword) => {
         const box = {
             id: keyword,
@@ -182,7 +185,6 @@ export function parseTemplate(lines) {
         logDebug(`Added item template for keyword ${keyword}`);
     });
 
-    // Add message template boxes for #keywords (MESSAGE)
     messageKeywords.forEach(({ desc, string }, keyword) => {
         const box = {
             id: keyword,
@@ -205,9 +207,7 @@ export function parseTemplate(lines) {
         logDebug(`Added message template for keyword ${keyword} with text: ${string}`);
     });
 
-    // Add move template boxes for #keywords (MOVE/PLMOVE)
     moveKeywords.forEach(({ desc, spot, orientation }, keyword) => {
-        // Map position box
         const mapPosBox = {
             id: `${keyword}-mappos`,
             desc: `${keyword} move destination`,
@@ -228,7 +228,6 @@ export function parseTemplate(lines) {
         };
         logDebug(`Added map position template for keyword ${keyword}-mappos with spot: ${spot}`);
 
-        // Orientation box
         const orientationBox = {
             id: `${keyword}-orientation`,
             desc: `${keyword} move orientation`,
@@ -252,7 +251,6 @@ export function parseTemplate(lines) {
         logDebug(`Added orientation template for keyword ${keyword}-orientation with value: ${orientation}`);
     });
 
-    // Store parsed settings in editedValues
     editedValues.title = title || eventName || '';
     editedValues.description = description;
 
