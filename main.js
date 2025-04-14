@@ -94,16 +94,14 @@ function exportFile() {
                 newTemplateLines.push(
                     `\t設定ボックス\tマップ座標`,
                     `\t\t設定ID\t${keyword}`,
-                    `\t\t説明\t${settings.desc || `${keyword} destination`}`,
-                    `\t\tデフォルト文字列\t${settings.string || ''}`,
+                    `\t\t説明\t${settings.desc || `Select the Destination (right drag to scroll)`}`,
                     `\t設定ボックス終了`
                 );
             } else if (settings.type === 'ORIENTATION') {
                 newTemplateLines.push(
                     `\t設定ボックス\t方向`,
                     `\t\t設定ID\t${keyword}`,
-                    `\t\t説明\t${settings.desc || `${keyword} orientation`}`,
-                    `\t\tデフォルト整数\t${settings.int || '0'}`,
+                    `\t\t説明\t${settings.desc || `Orientation After Movement`}`,
                     `\t\tオプション\t変更しないを追加`,
                     `\t設定ボックス終了`
                 );
@@ -159,6 +157,8 @@ function exportFile() {
         alert('Failed to export file. Check debug log for details.');
     }
 }
+
+
 
 function updateSettingBox(lines, boxLines, startIndex, idMapping) {
     let settingId = '', newSettingId = '';

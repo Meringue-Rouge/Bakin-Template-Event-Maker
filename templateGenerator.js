@@ -14,7 +14,7 @@ export function generateTemplate(lines, eventName) {
     const itemKeywords = new Map();
     const switchKeywords = new Map();
     const messageKeywords = new Map();
-    const moveKeywords = new Map(); // New map for MOVE/PLMOVE keywords
+    const moveKeywords = new Map(); // Map for MOVE/PLMOVE keywords
 
     // First pass: Apply replacements for items, switches, graphics, messages, and moves
     for (let i = 0; i < modifiedLines.length; i++) {
@@ -140,7 +140,7 @@ export function generateTemplate(lines, eventName) {
                 lastComment = null;
                 continue;
             }
-            if (line.startsWith('コマンド\tSWITCH') || line.startsWith('コマンド\tIF [email protected]@IFSWITCH')) {
+            if (line.startsWith('コマンド\tSWITCH') || line.startsWith('コマンド\tIFSWITCH')) {
                 logDebug(`Detected ${line.startsWith('コマンド\tSWITCH') ? 'SWITCH' : 'IFSWITCH'} after #${lastComment.id} at line ${i + 1}`);
                 lastComment.isSwitch = true;
                 if (!switchKeywords.has(lastComment.id)) {
@@ -183,7 +183,7 @@ export function generateTemplate(lines, eventName) {
                 lastComment.isMessage = true;
                 if (!messageKeywords.has(lastComment.id)) {
                     let messageText = '';
-                    for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().StartsWith('コマンド終了'); j++) {
+                    for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
                         if (modifiedLines[j].trim().startsWith('文字列')) {
                             messageText = modifiedLines[j].replace('文字列', '').trim();
                             const prefix = modifiedLines[j].match(/^\t*/)[0];
@@ -247,7 +247,7 @@ export function generateTemplate(lines, eventName) {
                     // Map position box
                     const mapPosBox = {
                         id: `${lastComment.id}-mappos`,
-                        desc: `${lastComment.id} move destination`,
+                        desc: `Select the Destination (right drag to scroll)`,
                         defaultGuid: '',
                         defaultString: spot,
                         defaultInteger: '',
@@ -267,7 +267,7 @@ export function generateTemplate(lines, eventName) {
                     // Orientation box
                     const orientationBox = {
                         id: `${lastComment.id}-orientation`,
-                        desc: `${lastComment.id} move orientation`,
+                        desc: `Orientation After Movement`,
                         defaultGuid: '',
                         defaultString: '',
                         defaultInteger: orientation,
@@ -341,16 +341,14 @@ export function generateTemplate(lines, eventName) {
             `\t\tデフォルト文字列\t${string}`,
             `\t設定ボックス終了`
         ].join('\n')) : []),
-        ...(moveKeywords.size ? Array.from(moveKeywords.entries()).map(([keyword, { desc, spot, orientation }]) => [
+        ...(moveKeywords.size ? Array.from(moveKeywords.entries()).map(([keyword]) => [
             `\t設定ボックス\tマップ座標`,
             `\t\t設定ID\t${keyword}-mappos`,
-            `\t\t説明\t${desc} destination`,
-            `\t\tデフォルト文字列\t${spot}`,
+            `\t\t説明\tSelect the Destination (right drag to scroll)`,
             `\t設定ボックス終了`,
             `\t設定ボックス\t方向`,
             `\t\t設定ID\t${keyword}-orientation`,
-            `\t\t説明\t${desc} orientation`,
-            `\t\tデフォルト整数\t${orientation}`,
+            `\t\t説明\tOrientation After Movement`,
             `\t\tオプション\t変更しないを追加`,
             `\t設定ボックス終了`
         ].join('\n')) : []),
