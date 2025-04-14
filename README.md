@@ -22,6 +22,11 @@ https://meringue-rouge.github.io/Bakin-Template-Event-Maker/<br><br>
 - [X] **Event Switch On/Off / イベントスイッチのON/OFF**
 - [X] **Check Event Switch / イベントスイッチの確認**
 
+![Capture d'écran 2025-04-14 121710-small](https://github.com/user-attachments/assets/53fa669d-6386-49d2-b60d-6ea3569435c4)
+
+> [!TIP]
+> The exact switches that have a #keyword do not matter, as they are replaced by the template's selection, so long as the #keywords you use make sense.
+
 **Usage**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
 
 > ***If you are only checking for a single switch, then using the same keyword for different events will only result in one template entry on the UI.
