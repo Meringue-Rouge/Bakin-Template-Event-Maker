@@ -8,7 +8,7 @@ https://meringue-rouge.github.io/Bakin-Template-Event-Maker/
 - [X] **Increase/Decrease Item / アイテムを増やす／減らす**
 - [X] **Check Items Possessed / 持っているアイテムの確認**
 
-**Usage**: Create a note just over each event that you want a template for, in the format of #keyword, with keyword being a word of your choice.
+**Usage**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
 
 > ***If you are only checking for a single type of item, then using the same keyword for different events will only result in one template entry on the UI.
 > Ex: Use the same note keyword over both a Check Items Possessed Event and the Increase/Decrease Item event to check if the player has the item in question before giving said item.***
@@ -17,7 +17,7 @@ https://meringue-rouge.github.io/Bakin-Template-Event-Maker/
 - [X] **Event Switch On/Off / イベントスイッチのON/OFF**
 - [X] **Check Event Switch / イベントスイッチの確認**
 
-**Usage**: Create a note just over each event that you want a template for, in the format of #keyword, with keyword being a word of your choice.
+**Usage**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
 
 > ***If you are only checking for a single switch, then using the same keyword for different events will only result in one template entry on the UI.
 > Ex: Use the same note keyword over both a Check Event Switch Event and the Event Switch On/Off event to check if the switch is on or off, before turning that same switch on or off.***
@@ -25,7 +25,7 @@ https://meringue-rouge.github.io/Bakin-Template-Event-Maker/
 ## Money
 - [X] **Increase/Decrease Money / お金を増やす／減らす**
 
-**Usage**: Create a note just over each event that you want a template for, in the format of #keyword, with keyword being a word of your choice.
+**Usage**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
 
 > ***If you are only checking for a single switch, then using the same keyword for different events will only result in one template entry on the UI.
 > Ex: Use the same note keyword over both a Check Event Switch Event and the Event Switch On/Off event to check if the switch is on or off, before turning that same switch on or off.***
@@ -34,7 +34,7 @@ https://meringue-rouge.github.io/Bakin-Template-Event-Maker/
 - [X] **Teleport Player / プレイヤーを他の場所に移動**
 - [X] **Teleport Event / イベントを瞬間移動**
 
-**Usage**: Create a note just over each event that you want a template for, in the format of #keyword, with keyword being a word of your choice.
+**Usage**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
 **Note**: This will create both a map position and orientation template object on the website UI, per unique keyword.
 **Note**: In Bakin, using more than one teleport template object will result in only the last one having the map rendered. Entities will still be rendered on the other ui map.
 
