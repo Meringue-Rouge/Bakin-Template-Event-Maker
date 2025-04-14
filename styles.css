@@ -223,6 +223,68 @@ button:active {
     margin-bottom: 0.5rem;
 }
 
+/* Footer section */
+.footer {
+    margin-top: 2rem;
+    padding: 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.footer-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.footer-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.footer-text {
+    font-size: 0.95rem;
+    color: #4a4a4a;
+    font-weight: 500;
+}
+
+.discord-text {
+    font-size: 0.9rem;
+}
+
+/* Social links */
+.social-links {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.social-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background-color: #f5f7fa;
+    color: #4a4a4a;
+    text-decoration: none;
+    transition: background-color 0.2s, color 0.2s, transform 0.1s;
+}
+
+.social-link:hover {
+    background-color: #6366f1;
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.social-icon {
+    width: 20px;
+    height: 20px;
+}
+
 /* Responsive design */
 @media (max-width: 600px) {
     body {
@@ -245,5 +307,30 @@ button:active {
 
     .help-section {
         padding: 1rem;
+    }
+
+    .footer {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .footer-avatar {
+        width: 72px;
+        height: 72px;
+    }
+
+    .social-links {
+        gap: 0.75rem;
+    }
+
+    .social-link {
+        width: 28px;
+        height: 28px;
+    }
+
+    .social-icon {
+        width: 18px;
+        height: 18px;
     }
 }
