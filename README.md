@@ -13,6 +13,11 @@ https://meringue-rouge.github.io/Bakin-Template-Event-Maker/<br><br>
 - [X] **Increase/Decrease Item / アイテムを増やす／減らす**
 - [X] **Check Items Possessed / 持っているアイテムの確認**
 
+![Capture d'écran 2025-04-14 122216-small](https://github.com/user-attachments/assets/b80c5f90-c7b8-4159-ba87-41bb42e28d37)
+
+> [!TIP]
+> The exact items that you specify when they have a #keyword do not matter, as they are replaced by the template's selection, so long as the #keywords you use make sense logically.
+
 **Usage**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
 
 > ***If you are only checking for a single type of item, then using the same keyword for different events will only result in one template entry on the UI.
