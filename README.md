@@ -49,6 +49,8 @@ https://meringue-rouge.github.io/Bakin-Template-Event-Maker/<br><br>
 - [X] **Teleport Player / プレイヤーを他の場所に移動**
 - [X] **Teleport Event / イベントを瞬間移動**
 
+![Capture d'écran 2025-04-14 122535-small](https://github.com/user-attachments/assets/5baa9903-3dab-4c04-9c92-e6883639e1c5)
+
 **Usage**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
 > [!NOTE]
 > This will create both a map position and orientation template object on the website UI, per unique keyword.
