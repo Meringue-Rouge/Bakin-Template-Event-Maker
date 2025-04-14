@@ -43,10 +43,12 @@ https://meringue-rouge.github.io/Bakin-Template-Event-Maker/
 
 ## EventSheet Graphics
 
-**Usage**: For every EventSheet (but not parallel sheets) that you want to be able to modify the graphics, but not through an event, create a note written in the format of G#keyword, with keyword being a word of your choice.
+**Usage**: For every EventSheet (but not parallel sheets) that you want to be able to modify the graphics, but not through an event, create a note written in the format of **G#keyword**, with keyword being a word of your choice.
 
 > ***Only one G#keyword per eventsheet allowed. You can reuse the same G#keyword on different sheets if you want different sheets to share the same changable model.***
 
+
+More events will be supported as I get to working on this tool.
 
 # Usage:
 - Create an event in Bakin.
