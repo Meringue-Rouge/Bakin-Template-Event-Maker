@@ -1,7 +1,12 @@
-**Use the tool here:**
-https://meringue-rouge.github.io/Bakin-Template-Event-Maker/
+![customtemplate](https://github.com/user-attachments/assets/b0343073-ce0a-4292-a58d-deb4f8bc356c)
+<h1 align="center">
+https://meringue-rouge.github.io/Bakin-Template-Event-Maker/<br><br>
+</h1>
 
+**Generate custom template events for RPG Developer Bakin using this website and simple Note events in your event export!**
 
+> [!WARNING]
+> Website is in BETA, a lot of features aren't supported. If you encounter bugs, please submit an issue here on contact me on X ([@ingenoireP](https://x.com/IngenoireP)). Thanks, and hopefully this tool helps you out!
 
 # Supported Event Types
 ## Items
@@ -35,7 +40,8 @@ https://meringue-rouge.github.io/Bakin-Template-Event-Maker/
 - [X] **Teleport Event / イベントを瞬間移動**
 
 **Usage**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
-**Note**: This will create both a map position and orientation template object on the website UI, per unique keyword.
+> [!NOTE]
+> This will create both a map position and orientation template object on the website UI, per unique keyword.
 **Note**: In Bakin, using more than one teleport template object will result in only the last one having the map rendered. Entities will still be rendered on the other ui map.
 
 > ***Use the same keyword if you have multiple teleport events that need to go to the same position.
