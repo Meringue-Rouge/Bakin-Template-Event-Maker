@@ -1,14 +1,36 @@
 **Use the tool here:**
 https://meringue-rouge.github.io/Bakin-Template-Event-Maker/
 
-# What's working:
-- Parsing default templates (not fully complete)
-- Exporting with changes
-- Importing custom events (partial) without a template, generating templates based on comments in the event
 
-# Tested parameter generation types from an exported event
-- Items (parameter lets you select an item for events that give / take items, and check for item in inventory)
-- Switches (toggle on/off an existing global or cross-save switch, and "check for switch" event)
+
+# Supported Event Types
+## Items
+- [X] **Increase/Decrease Item / アイテムを増やす／減らす**
+- [X] **Check Items Possessed / 持っているアイテムの確認**
+
+**Usage**: Create a note just over each event that you want a template for, in the format of #keyword, with keyword being a word of your choice.
+
+> ***If you are only checking for a single type of item, then using the same keyword for different events will only result in one template entry on the UI.
+> Ex: Use the same note keyword over both a Check Items Possessed Event and the Increase/Decrease Item event to check if the player has the item in question before giving said item.***
+
+## Switches
+- [X] **Event Switch On/Off / イベントスイッチのON/OFF**
+- [X] **Check Event Switch / イベントスイッチの確認**
+
+**Usage**: Create a note just over each event that you want a template for, in the format of #keyword, with keyword being a word of your choice.
+
+> ***If you are only checking for a single switch, then using the same keyword for different events will only result in one template entry on the UI.
+> Ex: Use the same note keyword over both a Check Event Switch Event and the Event Switch On/Off event to check if the switch is on or off, before turning that same switch on or off.***
+
+## Money
+- [X] **Increase/Decrease Money / お金を増やす／減らす**
+
+**Usage**: Create a note just over each event that you want a template for, in the format of #keyword, with keyword being a word of your choice.
+
+> ***If you are only checking for a single switch, then using the same keyword for different events will only result in one template entry on the UI.
+> Ex: Use the same note keyword over both a Check Event Switch Event and the Event Switch On/Off event to check if the switch is on or off, before turning that same switch on or off.***
+
+
 - Money (add or subtract money)
 - EventSheet graphics (using G#keywords, one per non-parallel sheet that you wish to change the graphics for)
 - Teleport Player/Event (for events, leave it on "This Event" for the target, otherwise it'll teleport the GUID associated to the event)
