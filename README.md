@@ -30,10 +30,23 @@ https://meringue-rouge.github.io/Bakin-Template-Event-Maker/
 > ***If you are only checking for a single switch, then using the same keyword for different events will only result in one template entry on the UI.
 > Ex: Use the same note keyword over both a Check Event Switch Event and the Event Switch On/Off event to check if the switch is on or off, before turning that same switch on or off.***
 
+## Teleport
+- [X] **Teleport Player / プレイヤーを他の場所に移動**
+- [X] **Teleport Event / イベントを瞬間移動**
 
-- Money (add or subtract money)
-- EventSheet graphics (using G#keywords, one per non-parallel sheet that you wish to change the graphics for)
-- Teleport Player/Event (for events, leave it on "This Event" for the target, otherwise it'll teleport the GUID associated to the event)
+**Usage**: Create a note just over each event that you want a template for, in the format of #keyword, with keyword being a word of your choice.
+**Note**: This will create both a map position and orientation template object on the website UI, per unique keyword.
+**Note**: In Bakin, using more than one teleport template object will result in only the last one having the map rendered. Entities will still be rendered on the other ui map.
+
+> ***Use the same keyword if you have multiple teleport events that need to go to the same position.
+> Ex: Use the same note keyword over both a Check Event Switch Event and the Event Switch On/Off event to check if the switch is on or off, before turning that same switch on or off.***
+
+## EventSheet Graphics
+
+**Usage**: For every EventSheet (but not parallel sheets) that you want to be able to modify the graphics, but not through an event, create a note written in the format of G#keyword, with keyword being a word of your choice.
+
+> ***Only one G#keyword per eventsheet allowed. You can reuse the same G#keyword on different sheets if you want different sheets to share the same changable model.***
+
 
 # Usage:
 - Create an event in Bakin.
