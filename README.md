@@ -12,6 +12,8 @@ https://meringue-rouge.github.io/Bakin-Template-Event-Maker/<br><br>
 ### How to use Keywords
 These events can have a "note" event placed just over the event you want to be able to change through the UI in Bakin. The format of the note must be `#keyword`, with `keyword` being any word you want that you can understand (like a variable of sorts). *This will only apply to the event immediately under it.*
 
+Using **unique keywords** (no two keywords are the same) throughout an event will create a template UI object **for each keyword**.
+
 Using the **exact same keyword multiple times** throughout an event and it's sheets will only result in **one template UI** object, but will apply to all the events concerned. Don't share the same keyword for events with different subject matters (it's fine to use the same keyword for an Increase/Decrease Item event and a Check Items Possessed event, but you can't use that same keyword for a teleport event).
 
 
