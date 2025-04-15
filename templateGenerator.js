@@ -19,6 +19,7 @@ export function generateTemplate(lines, eventName) {
     const battleBackgroundKeywords = new Map();
     const moveKeywords = new Map();
     const variableKeywords = new Map();
+    const dialogueKeywords = new Map();
     const usedGraphicKeywords = new Set();
     const sheetGraphicUpdates = new Map();
 
@@ -93,13 +94,53 @@ export function generateTemplate(lines, eventName) {
                         sheetGraphicUpdates.set(sheetName, { keyword, lineIndex: currentSheetStart + 1 });
                         logDebug(`Scheduled グラフィック update for sheet ${sheetName} to |Guid|${keyword}|`);
                     }
-                } else if (comment.startsWith('#')) {
-                    const keyword = comment.slice(1).split(/\s+/)[0];
+                } else if (comment.startsWith('C#')) {
+                    const keyword = comment.slice(2).split(/\s+/)[0];
+                    if (keyword && !graphicKeywords.has(keyword)) {
+                        graphicKeywords.set(keyword, {
+                            sheetName: sheetName || 'Event',
+                            guid: graphicGuid || '',
+                            motion: motion || ''
+                        });
+                        const box = {
+                            id: keyword,
+                            desc: `${sheetName || 'Event'} graphic`,
+                            defaultGuid: graphicGuid || '',
+                            defaultString: motion || '',
+                            defaultInteger: '',
+                            category: '顔グラフィック',
+                            type: 'FACIAL GRAPHICS',
+                            options: {}
+                        };
+                        settingBoxes.push(box);
+                        editedValues.settings[keyword] = {
+                            id: keyword,
+                            desc: box.desc,
+                            guid: graphicGuid || '',
+                            string: motion || '',
+                            int: '',
+                            type: 'FACIAL GRAPHICS'
+                        };
+                        logDebug(`Added character graphic template for C#${keyword} with GUID ${graphicGuid || 'none'} and motion ${motion || 'none'}`);
+                    }
+                } else if (comment.startsWith('#') || comment.startsWith('M#')) {
+                    const keyword = comment.startsWith('M#') ? comment.slice(2).split(/\s+/)[0] : comment.slice(1).split(/\s+/)[0];
+                    let dialogueCharacters = { leftSpeaker: null, rightSpeaker: null, eventL: null, eventR: null };
+                    if (comment.includes('[') && comment.includes(']')) {
+                        const bracketContent = comment.match(/\[([^\]]*)\]/)?.[1] || '';
+                        const parts = bracketContent.split(',').map(c => c.trim());
+                        if (parts.length >= 2) {
+                            dialogueCharacters.leftSpeaker = parts[0] || null;
+                            dialogueCharacters.rightSpeaker = parts[1] || null;
+                            dialogueCharacters.eventL = parts[2] || null;
+                            dialogueCharacters.eventR = parts[3] || null;
+                        }
+                    }
                     if (keyword) {
-                        logDebug(`Found comment #${keyword} at line ${i + 1}`);
+                        logDebug(`Found ${comment.startsWith('M#') ? 'M#' : '#'} ${keyword} at line ${i + 1}`);
                         lastComment = {
                             id: keyword,
-                            isGraphic: false,
+                            isGraphic: comment.startsWith('G#'),
                             isEventGraphic: false,
                             isItem: false,
                             isSwitch: false,
@@ -107,6 +148,8 @@ export function generateTemplate(lines, eventName) {
                             isBossBattle: false,
                             isMove: false,
                             isVariable: false,
+                            isDialogue: false,
+                            dialogueCharacters,
                             lineIndex: i
                         };
                     }
@@ -115,6 +158,82 @@ export function generateTemplate(lines, eventName) {
             continue;
         }
         if (inScript && lastComment) {
+            if (line.startsWith('コマンド\tDIALOGUE')) {
+                logDebug(`Detected DIALOGUE after ${lastComment.id} at line ${i + 1}`);
+                lastComment.isDialogue = true;
+                if (!dialogueKeywords.has(lastComment.id)) {
+                    let dialogueText = '';
+                    let leftGuid = '', rightGuid = '', leftMotion = '', rightMotion = '', speaker = '0';
+                    for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
+                        const subLine = modifiedLines[j].trim();
+                        if (subLine.startsWith('文字列') && !subLine.includes('|文字列|') && !subLine.includes('|表情|')) {
+                            dialogueText = subLine.replace('文字列', '').trim();
+                            const prefix = modifiedLines[j].match(/^\t*/)[0];
+                            modifiedLines[j] = `${prefix}文字列\t|文字列|${lastComment.id}|`;
+                            logDebug(`Updated DIALOGUE 文字列 to |文字列|${lastComment.id}| at line ${j + 1}`);
+                        } else if (subLine.startsWith('Guid') && !leftGuid) {
+                            leftGuid = subLine.replace('Guid', '').trim();
+                        } else if ((subLine.startsWith('文字列') || subLine.startsWith('|表情|')) && !leftMotion) {
+                            leftMotion = subLine.replace('文字列', '').replace('|表情|', '').trim();
+                        } else if (subLine.startsWith('Guid') && leftGuid && !rightGuid) {
+                            rightGuid = subLine.replace('Guid', '').trim();
+                        } else if ((subLine.startsWith('文字列') || subLine.startsWith('|表情|')) && leftMotion && !rightMotion) {
+                            rightMotion = subLine.replace('文字列', '').replace('|表情|', '').trim();
+                        } else if (subLine.startsWith('整数') && !subLine.includes('Guid')) {
+                            speaker = subLine.replace('整数', '').trim();
+                        }
+                    }
+                    let updateIndex = i + 1;
+                    const prefix = modifiedLines[i + 1].match(/^\t*/)[0];
+                    const leftSpeakerId = lastComment.dialogueCharacters.leftSpeaker || 'player';
+                    const rightSpeakerId = lastComment.dialogueCharacters.rightSpeaker || 'guest';
+                    const dialogueLines = [
+                        `${prefix}文字列\t|文字列|${lastComment.id}|`,
+                        `${prefix}整数\t2`,
+                        `${prefix}整数\t0`,
+                        `${prefix}Guid\t|Guid|${leftSpeakerId}|`,
+                        lastComment.dialogueCharacters.eventL ? `${prefix}文字列\t${leftMotion || 'wait'}` : `${prefix}|表情|${leftSpeakerId}|`,
+                        `${prefix}Guid\t|Guid|${rightSpeakerId}|`,
+                        lastComment.dialogueCharacters.eventR ? `${prefix}文字列\t${rightMotion || 'wait'}` : `${prefix}|表情|${rightSpeakerId}|`,
+                        `${prefix}整数\t${speaker}`
+                    ];
+                    for (let j = 0; j < dialogueLines.length && updateIndex < modifiedLines.length; j++, updateIndex++) {
+                        if (!modifiedLines[updateIndex].trim().startsWith('コマンド終了')) {
+                            modifiedLines[updateIndex] = dialogueLines[j];
+                        }
+                    }
+                    dialogueKeywords.set(lastComment.id, {
+                        desc: `${lastComment.id} dialogue`,
+                        string: dialogueText,
+                        leftSpeaker: lastComment.dialogueCharacters.leftSpeaker,
+                        rightSpeaker: lastComment.dialogueCharacters.rightSpeaker,
+                        eventL: lastComment.dialogueCharacters.eventL,
+                        eventR: lastComment.dialogueCharacters.eventR
+                    });
+                    const box = {
+                        id: lastComment.id,
+                        desc: `${lastComment.id} dialogue`,
+                        defaultGuid: '',
+                        defaultString: dialogueText,
+                        defaultInteger: '',
+                        category: '文章',
+                        type: 'MESSAGE',
+                        options: {}
+                    };
+                    settingBoxes.push(box);
+                    editedValues.settings[lastComment.id] = {
+                        id: lastComment.id,
+                        desc: box.desc,
+                        guid: '',
+                        string: dialogueText,
+                        int: '',
+                        type: 'MESSAGE'
+                    };
+                    logDebug(`Added dialogue template for keyword ${lastComment.id} with text: ${dialogueText}`);
+                }
+                lastComment = null;
+                continue;
+            }
             if (line.startsWith('コマンド\tMESSAGE')) {
                 logDebug(`Detected MESSAGE after #${lastComment.id} at line ${i + 1}`);
                 lastComment.isMessage = true;
@@ -172,7 +291,7 @@ export function generateTemplate(lines, eventName) {
                                 const prefix = modifiedLines[j].match(/^\t*/)[0];
                                 modifiedLines[j] = `${prefix}Guid\t|Guid|${lastComment.id}-monster|`;
                                 logDebug(`Updated BOSSBATTLE monster Guid to |Guid|${lastComment.id}-monster| at line ${j + 1}`);
-                            } else if (guidCount === 3) { // Assuming third Guid is battlemap
+                            } else if (guidCount === 3) {
                                 backgroundGuid = subLine.replace('Guid', '').trim();
                                 const prefix = modifiedLines[j].match(/^\t*/)[0];
                                 modifiedLines[j] = `${prefix}Guid\t|Guid|${lastComment.id}-battlemap|`;
@@ -506,7 +625,7 @@ export function generateTemplate(lines, eventName) {
         `\t\tデフォルト文字列\t${editedValues.description || ''}`,
         `\t設定ボックス終了`,
         ...(graphicKeywords.size ? Array.from(graphicKeywords.entries()).map(([keyword, { sheetName, guid, motion }]) => [
-            `\t設定ボックス\tキャラクターグラフィック`,
+            `\t設定ボックス\t顔グラフィック`,
             `\t\t設定ID\t${keyword}`,
             `\t\t説明\t${sheetName} graphic`,
             `\t\tデフォルトGuid\t${guid}`,
@@ -535,6 +654,13 @@ export function generateTemplate(lines, eventName) {
             `\t設定ボックス終了`
         ].join('\n')) : []),
         ...(messageKeywords.size ? Array.from(messageKeywords.entries()).map(([keyword, { desc, string }]) => [
+            `\t設定ボックス\t文章`,
+            `\t\t設定ID\t${keyword}`,
+            `\t\t説明\t${desc}`,
+            `\t\tデフォルト文字列\t${string}`,
+            `\t設定ボックス終了`
+        ].join('\n')) : []),
+        ...(dialogueKeywords.size ? Array.from(dialogueKeywords.entries()).map(([keyword, { desc, string }]) => [
             `\t設定ボックス\t文章`,
             `\t\t設定ID\t${keyword}`,
             `\t\t説明\t${desc}`,

@@ -58,7 +58,16 @@ function exportFile() {
 
         // Add setting boxes from editedValues.settings
         Object.entries(editedValues.settings).forEach(([keyword, settings]) => {
-            if (settings.type === 'GRAPHICAL') {
+            if (settings.type === 'FACIAL GRAPHICS') {
+                newTemplateLines.push(
+                    `\t設定ボックス\t顔グラフィック`,
+                    `\t\t設定ID\t${keyword}`,
+                    `\t\t説明\t${settings.desc || `${keyword} graphic`}`,
+                    `\t\tデフォルトGuid\t${settings.guid || ''}`,
+                    ...(settings.string ? [`\t\tデフォルト文字列\t${settings.string}`] : []),
+                    `\t設定ボックス終了`
+                );
+            } else if (settings.type === 'GRAPHICAL') {
                 newTemplateLines.push(
                     `\t設定ボックス\tキャラクターグラフィック`,
                     `\t\t設定ID\t${keyword}`,

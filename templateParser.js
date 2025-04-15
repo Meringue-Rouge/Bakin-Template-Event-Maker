@@ -8,6 +8,7 @@ export function parseTemplate(lines) {
     const eventGraphicKeywords = new Map();
     const itemKeywords = new Map();
     const messageKeywords = new Map();
+    const dialogueKeywords = new Map();
     const monsterKeywords = new Map();
     const battleBackgroundKeywords = new Map();
     const moveKeywords = new Map();
@@ -59,11 +60,57 @@ export function parseTemplate(lines) {
                         });
                         logDebug(`Found G#${keyword} in sheet ${sheetName} with GUID ${graphicGuid} and motion ${motion || 'none'}`);
                     }
-                } else if (comment.startsWith('#')) {
-                    const keyword = comment.slice(1).split(/\s+/)[0];
+                } else if (comment.startsWith('C#')) {
+                    const keyword = comment.slice(2).split(/\s+/)[0];
+                    if (keyword && !graphicKeywords.has(keyword)) {
+                        graphicKeywords.set(keyword, {
+                            sheetName: sheetName || 'Event',
+                            guid: graphicGuid || '',
+                            motion: motion || ''
+                        });
+                        logDebug(`Found C#${keyword} in sheet ${sheetName || 'Event'} with GUID ${graphicGuid || 'none'} and motion ${motion || 'none'}`);
+                    }
+                } else if (comment.startsWith('#') || comment.startsWith('M#')) {
+                    const keyword = comment.startsWith('M#') ? comment.slice(2).split(/\s+/)[0] : comment.slice(1).split(/\s+/)[0];
+                    let dialogueCharacters = { leftSpeaker: null, rightSpeaker: null, eventL: null, eventR: null };
+                    if (comment.includes('[') && comment.includes(']')) {
+                        const bracketContent = comment.match(/\[([^\]]*)\]/)?.[1] || '';
+                        const parts = bracketContent.split(',').map(c => c.trim());
+                        if (parts.length >= 2) {
+                            dialogueCharacters.leftSpeaker = parts[0] || null;
+                            dialogueCharacters.rightSpeaker = parts[1] || null;
+                            dialogueCharacters.eventL = parts[2] || null;
+                            dialogueCharacters.eventR = parts[3] || null;
+                        }
+                    }
                     if (keyword) {
-                        // Check for MESSAGE command
-                        if (i + 2 < lines.length && lines[i + 2].trim().startsWith('コマンド\tMESSAGE')) {
+                        if (i + 2 < lines.length && lines[i + 2].trim().startsWith('コマンド\tDIALOGUE')) {
+                            let dialogueText = '';
+                            let leftGuid = '', rightGuid = '', leftMotion = '', rightMotion = '';
+                            for (let j = i + 3; j < lines.length && !lines[j].trim().startsWith('コマンド終了'); j++) {
+                                const subLine = lines[j].trim();
+                                if (subLine.startsWith('文字列') && !subLine.includes('|文字列|') && !subLine.includes('|表情|')) {
+                                    dialogueText = subLine.replace('文字列', '').trim();
+                                } else if (subLine.startsWith('Guid') && !leftGuid) {
+                                    leftGuid = subLine.replace('Guid', '').trim();
+                                } else if ((subLine.includes('|表情|') || subLine.startsWith('|表情|')) && !leftMotion) {
+                                    leftMotion = subLine.replace('文字列', '').replace('|表情|', '').trim();
+                                } else if (subLine.startsWith('Guid') && leftGuid && !rightGuid) {
+                                    rightGuid = subLine.replace('Guid', '').trim();
+                                } else if ((subLine.includes('|表情|') || subLine.startsWith('|表情|')) && leftMotion && !rightMotion) {
+                                    rightMotion = subLine.replace('文字列', '').replace('|表情|', '').trim();
+                                }
+                            }
+                            dialogueKeywords.set(keyword, {
+                                desc: `${keyword} dialogue`,
+                                string: dialogueText,
+                                leftSpeaker: dialogueCharacters.leftSpeaker,
+                                rightSpeaker: dialogueCharacters.rightSpeaker,
+                                eventL: dialogueCharacters.eventL,
+                                eventR: dialogueCharacters.eventR
+                            });
+                            logDebug(`Found ${comment.startsWith('M#') ? 'M#' : '#'} ${keyword} for DIALOGUE in sheet ${sheetName} with text: ${dialogueText}`);
+                        } else if (i + 2 < lines.length && lines[i + 2].trim().startsWith('コマンド\tMESSAGE')) {
                             let messageText = '';
                             for (let j = i + 3; j < lines.length && !lines[j].trim().startsWith('コマンド終了'); j++) {
                                 const subLine = lines[j].trim();
@@ -217,8 +264,8 @@ export function parseTemplate(lines) {
             defaultGuid: guid,
             defaultString: motion,
             defaultInteger: '',
-            category: 'キャラクターグラフィック',
-            type: 'GRAPHICAL',
+            category: '顔グラフィック',
+            type: 'FACIAL GRAPHICS',
             options: {}
         };
         settingBoxes.push(box);
@@ -228,7 +275,7 @@ export function parseTemplate(lines) {
             guid: guid,
             string: motion,
             int: '',
-            type: 'GRAPHICAL'
+            type: 'FACIAL GRAPHICS'
         };
         logDebug(`Added graphic template for keyword ${keyword} from sheet ${sheetName}`);
     });
@@ -300,6 +347,33 @@ export function parseTemplate(lines) {
             type: 'MESSAGE'
         };
         logDebug(`Added message template for keyword ${keyword} with text: ${string}`);
+    });
+
+    dialogueKeywords.forEach(({ desc, string, leftSpeaker, rightSpeaker, eventL, eventR }, keyword) => {
+        const box = {
+            id: keyword,
+            desc: desc,
+            defaultGuid: '',
+            defaultString: string,
+            defaultInteger: '',
+            category: '文章',
+            type: 'MESSAGE',
+            options: {}
+        };
+        settingBoxes.push(box);
+        editedValues.settings[keyword] = {
+            id: keyword,
+            desc: box.desc,
+            guid: '',
+            string: string,
+            int: '',
+            type: 'MESSAGE',
+            leftSpeaker,
+            rightSpeaker,
+            eventL,
+            eventR
+        };
+        logDebug(`Added dialogue template for keyword ${keyword} with text: ${string}`);
     });
 
     monsterKeywords.forEach(({ desc, guid }, keyword) => {
