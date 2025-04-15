@@ -80,6 +80,23 @@ Using the **exact same keyword multiple times** throughout an event and it's she
 > ***Use the same keyword if you have multiple teleport events that need to go to the same position.
 > Ex: Use the same note keyword over both a Check Event Switch Event and the Event Switch On/Off event to check if the switch is on or off, before turning that same switch on or off.***
 
+## Battle
+- [X] **Execute Battle and Check Results / バトル実行と結果の確認**
+
+**Usage**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
+> [!NOTE]
+> This will create both an enemy and a battle map template object on the website UI, per unique keyword.
+> Additionally, only one enemy is currently supported. To get around this without converting the event, make an enemy without a model, make a common event that runs at the start of battle checking if this modeless enemy is present, and if it is, spawn and replace the enemy with the enemies of your choice.
+
+> ***Use the same keyword if you have multiple events with the same encounter. However, to change background between two keyword created encounters, you'll need two different keywords.***
+
+## Dialogue
+- [X] **Display Message / メッセージを表示**
+
+**Usage**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
+
+Conversations coming soon.
+
 ## Graphics
 
 - [X] **EventSheet Graphics**
