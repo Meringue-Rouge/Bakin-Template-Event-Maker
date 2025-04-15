@@ -45,6 +45,19 @@ Using the **exact same keyword multiple times** throughout an event and it's she
 > ***If you are only checking for a single switch, then using the same keyword for different events will only result in one template entry on the UI.
 > Ex: Use the same note keyword over both a Check Event Switch Event and the Event Switch On/Off event to check if the switch is on or off, before turning that same switch on or off.***
 
+## Variable Box
+- [X] **Variable Box Assignment and Calculation / 変数ボックスへの代入と計算**
+
+![Capture d'écran 2025-04-15 105117-small](https://github.com/user-attachments/assets/647c686e-14f1-47f3-855e-c9e99e0c5b58)
+
+**Usage**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
+
+> [!WARNING]
+> This only applies to the ***value*** being assigned to a variable (user can define the value but not the variable to receive said value outside of what was defined in the event). You cannot (at this time) assign the variable box to change.
+
+> ***If you are only checking for a single switch, then using the same keyword for different events will only result in one template entry on the UI.
+> Ex: Use the same note keyword over both a Check Event Switch Event and the Event Switch On/Off event to check if the switch is on or off, before turning that same switch on or off.***
+
 ## Money
 - [X] **Increase/Decrease Money / お金を増やす／減らす**
 
