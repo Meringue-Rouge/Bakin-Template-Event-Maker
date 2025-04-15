@@ -142,10 +142,37 @@ function exportFile() {
             logDebug(`Inserted new template section at line ${insertIndex + 1}`);
         }
 
-        // Update VARIABLE commands with new integer values
+        // Update GRAPHIC and VARIABLE commands with new values
         let inScript = false;
         Object.entries(editedValues.settings).forEach(([keyword, settings]) => {
-            if (settings.type === 'VARIABLE') {
+            if (settings.type === 'GRAPHICAL') {
+                for (let i = 0; i < modifiedLines.length; i++) {
+                    const line = modifiedLines[i].trim();
+                    if (line.startsWith('スクリプト')) {
+                        inScript = true;
+                        continue;
+                    }
+                    if (line.startsWith('スクリプト終了')) {
+                        inScript = false;
+                        continue;
+                    }
+                    if (inScript && line.startsWith('コマンド\tCOMMENT')) {
+                        if (i + 1 < modifiedLines.length && modifiedLines[i + 1].trim().startsWith('文字列')) {
+                            const comment = modifiedLines[i + 1].replace('文字列', '').trim();
+                            if (comment === `#${keyword}` && i + 2 < modifiedLines.length && modifiedLines[i + 2].trim().startsWith('コマンド\tGRAPHIC')) {
+                                for (let j = i + 3; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
+                                    if (modifiedLines[j].trim().startsWith('Guid')) {
+                                        const prefix = modifiedLines[j].match(/^\t*/)[0];
+                                        modifiedLines[j] = `${prefix}Guid\t|Guid|${keyword}|`;
+                                        logDebug(`Updated GRAPHIC Guid for ${keyword} at line ${j + 1}`);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (settings.type === 'VARIABLE') {
                 for (let i = 0; i < modifiedLines.length; i++) {
                     const line = modifiedLines[i].trim();
                     if (line.startsWith('スクリプト')) {

@@ -11,11 +11,12 @@ export function generateTemplate(lines, eventName) {
     let inScript = false, inSheet = false, lastComment = null, currentSheetStart = -1;
     let sheetName = '', graphicGuid = '', motion = '';
     const graphicKeywords = new Map();
+    const eventGraphicKeywords = new Map(); // For #keywords (GRAPHIC event)
     const itemKeywords = new Map();
     const switchKeywords = new Map();
     const messageKeywords = new Map();
     const moveKeywords = new Map();
-    const variableKeywords = new Map(); // Added for VARIABLE keywords
+    const variableKeywords = new Map();
     const usedGraphicKeywords = new Set();
     const sheetGraphicUpdates = new Map();
 
@@ -97,6 +98,7 @@ export function generateTemplate(lines, eventName) {
                         lastComment = {
                             id: keyword,
                             isGraphic: false,
+                            isEventGraphic: false,
                             isItem: false,
                             isSwitch: false,
                             isMessage: false,
@@ -110,6 +112,51 @@ export function generateTemplate(lines, eventName) {
             continue;
         }
         if (inScript && lastComment) {
+            if (line.startsWith('コマンド\tGRAPHIC')) {
+                logDebug(`Detected GRAPHIC after #${lastComment.id} at line ${i + 1}`);
+                lastComment.isEventGraphic = true;
+                if (!eventGraphicKeywords.has(lastComment.id)) {
+                    let guid = '', animation = '';
+                    for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
+                        const subLine = modifiedLines[j].trim();
+                        if (subLine.startsWith('Guid')) {
+                            guid = subLine.replace('Guid', '').trim();
+                            const prefix = modifiedLines[j].match(/^\t*/)[0];
+                            modifiedLines[j] = `${prefix}Guid\t|Guid|${lastComment.id}|`;
+                            logDebug(`Updated GRAPHIC Guid to |Guid|${lastComment.id}| at line ${j + 1}`);
+                        } else if (subLine.startsWith('文字列')) {
+                            animation = subLine.replace('文字列', '').trim();
+                        }
+                    }
+                    eventGraphicKeywords.set(lastComment.id, {
+                        guid,
+                        motion: animation,
+                        desc: `${lastComment.id} graphic`
+                    });
+                    const box = {
+                        id: lastComment.id,
+                        desc: `${lastComment.id} graphic`,
+                        defaultGuid: guid,
+                        defaultString: animation,
+                        defaultInteger: '',
+                        category: 'キャラクターグラフィック',
+                        type: 'GRAPHICAL',
+                        options: {}
+                    };
+                    settingBoxes.push(box);
+                    editedValues.settings[lastComment.id] = {
+                        id: lastComment.id,
+                        desc: box.desc,
+                        guid,
+                        string: animation,
+                        int: '',
+                        type: 'GRAPHICAL'
+                    };
+                    logDebug(`Added event graphic template for keyword ${lastComment.id} with GUID ${guid} and animation ${animation || 'none'}`);
+                }
+                lastComment = null;
+                continue;
+            }
             if (line.startsWith('コマンド\tVARIABLE')) {
                 logDebug(`Detected VARIABLE after #${lastComment.id} at line ${i + 1}`);
                 lastComment.isVariable = true;
@@ -385,6 +432,14 @@ export function generateTemplate(lines, eventName) {
             `\t設定ボックス\tキャラクターグラフィック`,
             `\t\t設定ID\t${keyword}`,
             `\t\t説明\t${sheetName} graphic`,
+            `\t\tデフォルトGuid\t${guid}`,
+            ...(motion ? [`\t\tデフォルト文字列\t${motion}`] : []),
+            `\t設定ボックス終了`
+        ].join('\n')) : []),
+        ...(eventGraphicKeywords.size ? Array.from(eventGraphicKeywords.entries()).map(([keyword, { guid, motion, desc }]) => [
+            `\t設定ボックス\tキャラクターグラフィック`,
+            `\t\t設定ID\t${keyword}`,
+            `\t\t説明\t${desc}`,
             `\t\tデフォルトGuid\t${guid}`,
             ...(motion ? [`\t\tデフォルト文字列\t${motion}`] : []),
             `\t設定ボックス終了`

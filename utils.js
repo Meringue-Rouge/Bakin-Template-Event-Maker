@@ -27,22 +27,24 @@ const typeMap = {
     'アイテム': 'ITEM',
     'バトル背景': 'BATTLE BACKGROUND',
     '説明文': 'DESCRIPTION',
-    '数値': 'INTEGER',
+    '数値': 'VARIABLE', // Maps to VARIABLE for consistency
     'スイッチ': 'SWITCH',
     'マップ座標': 'MAP_POSITION',
-    '方向': 'ORIENTATION'
+    '方向': 'ORIENTATION',
+    '変数': 'VARIABLE'
 };
 
 // Command to template type mapping
 const commandTypeMap = {
     'SWITCH': 'SWITCH',
     'ITEM': 'ITEM',
-    'GRAPHIC': 'GRAPHICAL',
+    'GRAPHIC': 'GRAPHICAL', // Maps to GRAPHICAL for both eventsheet and event
     'DIALOGUE': 'MESSAGE',
-    'MONEY': 'INTEGER',
+    'MONEY': 'VARIABLE',
     'BOSSBATTLE': 'MONSTER',
-    'MOVE': 'MAP_POSITION', // Maps to MAP_POSITION for template generation
-    'PLMOVE': 'MAP_POSITION' // Maps to MAP_POSITION for template generation
+    'MOVE': 'MAP_POSITION',
+    'PLMOVE': 'MAP_POSITION',
+    'VARIABLE': 'VARIABLE'
 };
 
 // Export utilities

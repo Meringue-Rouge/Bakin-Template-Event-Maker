@@ -4,11 +4,12 @@ export function parseTemplate(lines) {
     let title = '', description = '', settingBoxes = [], currentBox = null, currentCategory = '';
     let hasTemplate = false, eventName = '';
     let inSheet = false, sheetName = '', graphicGuid = '', motion = '';
-    const graphicKeywords = new Map();
+    const graphicKeywords = new Map(); // For G#keywords (eventsheet graphics)
+    const eventGraphicKeywords = new Map(); // For #keywords (GRAPHIC event)
     const itemKeywords = new Map();
     const messageKeywords = new Map();
     const moveKeywords = new Map();
-    const variableKeywords = new Map(); // Added for VARIABLE keywords
+    const variableKeywords = new Map();
     const usedGraphicKeywords = new Set();
 
     for (let i = 0; i < lines.length; i++) {
@@ -59,8 +60,24 @@ export function parseTemplate(lines) {
                 } else if (comment.startsWith('#')) {
                     const keyword = comment.slice(1).split(/\s+/)[0];
                     if (keyword) {
-                        // Check for VARIABLE command
-                        if (i + 2 < lines.length && lines[i + 2].trim().startsWith('コマンド\tVARIABLE')) {
+                        // Check for GRAPHIC command
+                        if (i + 2 < lines.length && lines[i + 2].trim().startsWith('コマンド\tGRAPHIC')) {
+                            let guid = '', animation = '';
+                            for (let j = i + 3; j < lines.length && !lines[j].trim().startsWith('コマンド終了'); j++) {
+                                const subLine = lines[j].trim();
+                                if (subLine.startsWith('Guid')) {
+                                    guid = subLine.replace('Guid', '').trim();
+                                } else if (subLine.startsWith('文字列')) {
+                                    animation = subLine.replace('文字列', '').trim();
+                                }
+                            }
+                            eventGraphicKeywords.set(keyword, {
+                                guid,
+                                motion: animation,
+                                desc: `${keyword} graphic`
+                            });
+                            logDebug(`Found #${keyword} for GRAPHIC in sheet ${sheetName} with GUID ${guid} and animation ${animation || 'none'}`);
+                        } else if (i + 2 < lines.length && lines[i + 2].trim().startsWith('コマンド\tVARIABLE')) {
                             let defaultInt = '0';
                             let integerCount = 0;
                             for (let j = i + 3; j < lines.length && !lines[j].trim().startsWith('コマンド終了'); j++) {
@@ -68,7 +85,6 @@ export function parseTemplate(lines) {
                                 if (subLine.startsWith('整数')) {
                                     integerCount++;
                                     const value = subLine.replace('整数', '').trim();
-                                    // Third integer field (index 3: after first 整数, ローカル変数, second 整数)
                                     if (integerCount === 3) {
                                         defaultInt = value;
                                         variableKeywords.set(keyword, {
@@ -133,7 +149,7 @@ export function parseTemplate(lines) {
                 defaultInteger: '',
                 category: currentCategory,
                 type: typeMap[currentCategory] || 'UNKNOWN',
-                options: {} // Added to store min/max for VARIABLE
+                options: {}
             };
             continue;
         }
@@ -190,6 +206,29 @@ export function parseTemplate(lines) {
             type: 'GRAPHICAL'
         };
         logDebug(`Added graphic template for keyword ${keyword} from sheet ${sheetName}`);
+    });
+
+    eventGraphicKeywords.forEach(({ guid, motion, desc }, keyword) => {
+        const box = {
+            id: keyword,
+            desc: desc,
+            defaultGuid: guid,
+            defaultString: motion,
+            defaultInteger: '',
+            category: 'キャラクターグラフィック',
+            type: 'GRAPHICAL',
+            options: {}
+        };
+        settingBoxes.push(box);
+        editedValues.settings[keyword] = {
+            id: keyword,
+            desc: box.desc,
+            guid: guid,
+            string: motion,
+            int: '',
+            type: 'GRAPHICAL'
+        };
+        logDebug(`Added event graphic template for keyword ${keyword} with GUID ${guid} and motion ${motion || 'none'}`);
     });
 
     itemKeywords.forEach(({ guid, desc }, keyword) => {
