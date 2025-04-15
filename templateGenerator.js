@@ -11,10 +11,12 @@ export function generateTemplate(lines, eventName) {
     let inScript = false, inSheet = false, lastComment = null, currentSheetStart = -1;
     let sheetName = '', graphicGuid = '', motion = '';
     const graphicKeywords = new Map();
-    const eventGraphicKeywords = new Map(); // For #keywords (GRAPHIC event)
+    const eventGraphicKeywords = new Map();
     const itemKeywords = new Map();
     const switchKeywords = new Map();
     const messageKeywords = new Map();
+    const monsterKeywords = new Map();
+    const battleBackgroundKeywords = new Map();
     const moveKeywords = new Map();
     const variableKeywords = new Map();
     const usedGraphicKeywords = new Set();
@@ -102,6 +104,7 @@ export function generateTemplate(lines, eventName) {
                             isItem: false,
                             isSwitch: false,
                             isMessage: false,
+                            isBossBattle: false,
                             isMove: false,
                             isVariable: false,
                             lineIndex: i
@@ -112,6 +115,122 @@ export function generateTemplate(lines, eventName) {
             continue;
         }
         if (inScript && lastComment) {
+            if (line.startsWith('コマンド\tMESSAGE')) {
+                logDebug(`Detected MESSAGE after #${lastComment.id} at line ${i + 1}`);
+                lastComment.isMessage = true;
+                if (!messageKeywords.has(lastComment.id)) {
+                    let messageText = '';
+                    for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
+                        if (modifiedLines[j].trim().startsWith('文字列')) {
+                            messageText = modifiedLines[j].replace('文字列', '').trim();
+                            const prefix = modifiedLines[j].match(/^\t*/)[0];
+                            modifiedLines[j] = `${prefix}文字列\t|文字列|${lastComment.id}|`;
+                            logDebug(`Updated MESSAGE 文字列 to |文字列|${lastComment.id}| at line ${j + 1}`);
+                            break;
+                        }
+                    }
+                    messageKeywords.set(lastComment.id, {
+                        desc: `${lastComment.id} message`,
+                        string: messageText
+                    });
+                    const box = {
+                        id: lastComment.id,
+                        desc: `${lastComment.id} message`,
+                        defaultGuid: '',
+                        defaultString: messageText,
+                        defaultInteger: '',
+                        category: '文章',
+                        type: 'MESSAGE',
+                        options: {}
+                    };
+                    settingBoxes.push(box);
+                    editedValues.settings[lastComment.id] = {
+                        id: lastComment.id,
+                        desc: box.desc,
+                        guid: '',
+                        string: messageText,
+                        int: '',
+                        type: 'MESSAGE'
+                    };
+                    logDebug(`Added message template for keyword ${lastComment.id} with text: ${messageText}`);
+                }
+                lastComment = null;
+                continue;
+            }
+            if (line.startsWith('コマンド\tBOSSBATTLE')) {
+                logDebug(`Detected BOSSBATTLE after #${lastComment.id} at line ${i + 1}`);
+                lastComment.isBossBattle = true;
+                if (!monsterKeywords.has(`${lastComment.id}-monster`)) {
+                    let monsterGuid = '', backgroundGuid = '';
+                    let guidCount = 0;
+                    for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
+                        const subLine = modifiedLines[j].trim();
+                        if (subLine.startsWith('Guid')) {
+                            guidCount++;
+                            if (guidCount === 1) {
+                                monsterGuid = subLine.replace('Guid', '').trim();
+                                const prefix = modifiedLines[j].match(/^\t*/)[0];
+                                modifiedLines[j] = `${prefix}Guid\t|Guid|${lastComment.id}-monster|`;
+                                logDebug(`Updated BOSSBATTLE monster Guid to |Guid|${lastComment.id}-monster| at line ${j + 1}`);
+                            } else if (guidCount === 3) { // Assuming third Guid is battlemap
+                                backgroundGuid = subLine.replace('Guid', '').trim();
+                                const prefix = modifiedLines[j].match(/^\t*/)[0];
+                                modifiedLines[j] = `${prefix}Guid\t|Guid|${lastComment.id}-battlemap|`;
+                                logDebug(`Updated BOSSBATTLE background Guid to |Guid|${lastComment.id}-battlemap| at line ${j + 1}`);
+                            }
+                        }
+                    }
+                    monsterKeywords.set(`${lastComment.id}-monster`, {
+                        desc: `Monster to Fight`,
+                        guid: monsterGuid
+                    });
+                    battleBackgroundKeywords.set(`${lastComment.id}-battlemap`, {
+                        desc: `Battle Background`,
+                        guid: backgroundGuid
+                    });
+                    const monsterBox = {
+                        id: `${lastComment.id}-monster`,
+                        desc: `Monster to Fight`,
+                        defaultGuid: monsterGuid,
+                        defaultString: '',
+                        defaultInteger: '',
+                        category: 'モンスター',
+                        type: 'MONSTER',
+                        options: {}
+                    };
+                    const backgroundBox = {
+                        id: `${lastComment.id}-battlemap`,
+                        desc: `Battle Background`,
+                        defaultGuid: backgroundGuid,
+                        defaultString: '',
+                        defaultInteger: '',
+                        category: 'バトル背景',
+                        type: 'BATTLE BACKGROUND',
+                        options: {}
+                    };
+                    settingBoxes.push(monsterBox, backgroundBox);
+                    editedValues.settings[`${lastComment.id}-monster`] = {
+                        id: `${lastComment.id}-monster`,
+                        desc: monsterBox.desc,
+                        guid: monsterGuid,
+                        string: '',
+                        int: '',
+                        type: 'MONSTER'
+                    };
+                    editedValues.settings[`${lastComment.id}-battlemap`] = {
+                        id: `${lastComment.id}-battlemap`,
+                        desc: backgroundBox.desc,
+                        guid: backgroundGuid,
+                        string: '',
+                        int: '',
+                        type: 'BATTLE BACKGROUND'
+                    };
+                    logDebug(`Added monster template for keyword ${lastComment.id}-monster with GUID ${monsterGuid}`);
+                    logDebug(`Added battle background template for keyword ${lastComment.id}-battlemap with GUID ${backgroundGuid}`);
+                }
+                lastComment = null;
+                continue;
+            }
             if (line.startsWith('コマンド\tGRAPHIC')) {
                 logDebug(`Detected GRAPHIC after #${lastComment.id} at line ${i + 1}`);
                 lastComment.isEventGraphic = true;
@@ -286,48 +405,6 @@ export function generateTemplate(lines, eventName) {
                 lastComment = null;
                 continue;
             }
-            if (line.startsWith('コマンド\tMESSAGE')) {
-                logDebug(`Detected MESSAGE after #${lastComment.id} at line ${i + 1}`);
-                lastComment.isMessage = true;
-                if (!messageKeywords.has(lastComment.id)) {
-                    let messageText = '';
-                    for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
-                        if (modifiedLines[j].trim().startsWith('文字列')) {
-                            messageText = modifiedLines[j].replace('文字列', '').trim();
-                            const prefix = modifiedLines[j].match(/^\t*/)[0];
-                            modifiedLines[j] = `${prefix}文字列\t|文字列|${lastComment.id}|`;
-                            logDebug(`Updated MESSAGE 文字列 to |文字列|${lastComment.id}| at line ${j + 1}`);
-                            break;
-                        }
-                    }
-                    messageKeywords.set(lastComment.id, {
-                        desc: `${lastComment.id} message`,
-                        string: messageText
-                    });
-                    const box = {
-                        id: lastComment.id,
-                        desc: `${lastComment.id} message`,
-                        defaultGuid: '',
-                        defaultString: messageText,
-                        defaultInteger: '',
-                        category: '文章',
-                        type: 'MESSAGE',
-                        options: {}
-                    };
-                    settingBoxes.push(box);
-                    editedValues.settings[lastComment.id] = {
-                        id: lastComment.id,
-                        desc: box.desc,
-                        guid: '',
-                        string: messageText,
-                        int: '',
-                        type: 'MESSAGE'
-                    };
-                    logDebug(`Added message template for keyword ${lastComment.id} with text: ${messageText}`);
-                }
-                lastComment = null;
-                continue;
-            }
             if (line.startsWith('コマンド\tPLMOVE') || line.startsWith('コマンド\tMOVE')) {
                 const commandType = line.startsWith('コマンド\tPLMOVE') ? 'PLMOVE' : 'MOVE';
                 logDebug(`Detected ${commandType} after #${lastComment.id} at line ${i + 1}`);
@@ -462,6 +539,21 @@ export function generateTemplate(lines, eventName) {
             `\t\t設定ID\t${keyword}`,
             `\t\t説明\t${desc}`,
             `\t\tデフォルト文字列\t${string}`,
+            `\t設定ボックス終了`
+        ].join('\n')) : []),
+        ...(monsterKeywords.size ? Array.from(monsterKeywords.entries()).map(([keyword, { desc, guid }]) => [
+            `\t設定ボックス\tモンスター`,
+            `\t\t設定ID\t${keyword}`,
+            `\t\t説明\t${desc}`,
+            `\t\tデフォルトGuid\t${guid}`,
+            `\t設定ボックス終了`,
+            `\t改行`
+        ].join('\n')) : []),
+        ...(battleBackgroundKeywords.size ? Array.from(battleBackgroundKeywords.entries()).map(([keyword, { desc, guid }]) => [
+            `\t設定ボックス\tバトル背景`,
+            `\t\t設定ID\t${keyword}`,
+            `\t\t説明\t${desc}`,
+            `\t\tデフォルトGuid\t${guid}`,
             `\t設定ボックス終了`
         ].join('\n')) : []),
         ...(moveKeywords.size ? Array.from(moveKeywords.entries()).map(([keyword]) => [

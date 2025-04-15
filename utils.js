@@ -27,7 +27,7 @@ const typeMap = {
     'アイテム': 'ITEM',
     'バトル背景': 'BATTLE BACKGROUND',
     '説明文': 'DESCRIPTION',
-    '数値': 'VARIABLE', // Maps to VARIABLE for consistency
+    '数値': 'VARIABLE',
     'スイッチ': 'SWITCH',
     'マップ座標': 'MAP_POSITION',
     '方向': 'ORIENTATION',
@@ -38,13 +38,14 @@ const typeMap = {
 const commandTypeMap = {
     'SWITCH': 'SWITCH',
     'ITEM': 'ITEM',
-    'GRAPHIC': 'GRAPHICAL', // Maps to GRAPHICAL for both eventsheet and event
+    'GRAPHIC': 'GRAPHICAL',
     'DIALOGUE': 'MESSAGE',
     'MONEY': 'VARIABLE',
-    'BOSSBATTLE': 'MONSTER',
+    'BOSSBATTLE': 'MONSTER', // Maps to MONSTER for enemy; BATTLE BACKGROUND handled separately
     'MOVE': 'MAP_POSITION',
     'PLMOVE': 'MAP_POSITION',
-    'VARIABLE': 'VARIABLE'
+    'VARIABLE': 'VARIABLE',
+    'MESSAGE': 'MESSAGE'
 };
 
 // Export utilities

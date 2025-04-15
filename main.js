@@ -89,6 +89,23 @@ function exportFile() {
                     `\t\tデフォルト文字列\t${settings.string || ''}`,
                     `\t設定ボックス終了`
                 );
+            } else if (settings.type === 'MONSTER') {
+                newTemplateLines.push(
+                    `\t設定ボックス\tモンスター`,
+                    `\t\t設定ID\t${keyword}`,
+                    `\t\t説明\t${settings.desc || `Monster to Fight`}`,
+                    `\t\tデフォルトGuid\t${settings.guid || ''}`,
+                    `\t設定ボックス終了`,
+                    `\t改行`
+                );
+            } else if (settings.type === 'BATTLE BACKGROUND') {
+                newTemplateLines.push(
+                    `\t設定ボックス\tバトル背景`,
+                    `\t\t設定ID\t${keyword}`,
+                    `\t\t説明\t${settings.desc || `Battle Background`}`,
+                    `\t\tデフォルトGuid\t${settings.guid || ''}`,
+                    `\t設定ボックス終了`
+                );
             } else if (settings.type === 'MAP_POSITION') {
                 newTemplateLines.push(
                     `\t設定ボックス\tマップ座標`,
@@ -142,7 +159,7 @@ function exportFile() {
             logDebug(`Inserted new template section at line ${insertIndex + 1}`);
         }
 
-        // Update GRAPHIC and VARIABLE commands with new values
+        // Update GRAPHIC, VARIABLE, MESSAGE, and BOSSBATTLE commands with new values
         let inScript = false;
         Object.entries(editedValues.settings).forEach(([keyword, settings]) => {
             if (settings.type === 'GRAPHICAL') {
@@ -196,6 +213,68 @@ function exportFile() {
                                             modifiedLines[j] = `${prefix}整数\t|整数|${keyword}|`;
                                             logDebug(`Updated VARIABLE 整数 for ${keyword} at line ${j + 1}`);
                                             break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (settings.type === 'MESSAGE') {
+                for (let i = 0; i < modifiedLines.length; i++) {
+                    const line = modifiedLines[i].trim();
+                    if (line.startsWith('スクリプト')) {
+                        inScript = true;
+                        continue;
+                    }
+                    if (line.startsWith('スクリプト終了')) {
+                        inScript = false;
+                        continue;
+                    }
+                    if (inScript && line.startsWith('コマンド\tCOMMENT')) {
+                        if (i + 1 < modifiedLines.length && modifiedLines[i + 1].trim().startsWith('文字列')) {
+                            const comment = modifiedLines[i + 1].replace('文字列', '').trim();
+                            if (comment === `#${keyword}` && i + 2 < modifiedLines.length && modifiedLines[i + 2].trim().startsWith('コマンド\tMESSAGE')) {
+                                for (let j = i + 3; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
+                                    if (modifiedLines[j].trim().startsWith('文字列')) {
+                                        const prefix = modifiedLines[j].match(/^\t*/)[0];
+                                        modifiedLines[j] = `${prefix}文字列\t|文字列|${keyword}|`;
+                                        logDebug(`Updated MESSAGE 文字列 for ${keyword} at line ${j + 1}`);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (settings.type === 'MONSTER' || settings.type === 'BATTLE BACKGROUND') {
+                const baseKeyword = keyword.replace(/-monster|-battlemap/, '');
+                for (let i = 0; i < modifiedLines.length; i++) {
+                    const line = modifiedLines[i].trim();
+                    if (line.startsWith('スクリプト')) {
+                        inScript = true;
+                        continue;
+                    }
+                    if (line.startsWith('スクリプト終了')) {
+                        inScript = false;
+                        continue;
+                    }
+                    if (inScript && line.startsWith('コマンド\tCOMMENT')) {
+                        if (i + 1 < modifiedLines.length && modifiedLines[i + 1].trim().startsWith('文字列')) {
+                            const comment = modifiedLines[i + 1].replace('文字列', '').trim();
+                            if (comment === `#${baseKeyword}` && i + 2 < modifiedLines.length && modifiedLines[i + 2].trim().startsWith('コマンド\tBOSSBATTLE')) {
+                                let guidCount = 0;
+                                for (let j = i + 3; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
+                                    if (modifiedLines[j].trim().startsWith('Guid')) {
+                                        guidCount++;
+                                        if (guidCount === 1 && settings.type === 'MONSTER') {
+                                            const prefix = modifiedLines[j].match(/^\t*/)[0];
+                                            modifiedLines[j] = `${prefix}Guid\t|Guid|${keyword}|`;
+                                            logDebug(`Updated BOSSBATTLE monster Guid for ${keyword} at line ${j + 1}`);
+                                        } else if (guidCount === 3 && settings.type === 'BATTLE BACKGROUND') {
+                                            const prefix = modifiedLines[j].match(/^\t*/)[0];
+                                            modifiedLines[j] = `${prefix}Guid\t|Guid|${keyword}|`;
+                                            logDebug(`Updated BOSSBATTLE background Guid for ${keyword} at line ${j + 1}`);
                                         }
                                     }
                                 }

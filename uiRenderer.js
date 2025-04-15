@@ -59,7 +59,7 @@ function renderInput(type, box) {
     if (type === 'MESSAGE' || type === 'SWITCH') {
         html += `
             <label for="string-input-${box.id}">${type === 'SWITCH' ? 'Switch Name' : 'Message Text'}:</label>
-            <textarea id="string-input-${box.id}" ${type === 'MESSAGE' ? 'readonly' : ''} onchange="updateField('settings.${box.id}.string', this.value)">${box.defaultString || ''}</textarea>
+            <textarea id="string-input-${box.id}" ${type === 'MESSAGE' ? '' : ''} onchange="updateField('settings.${box.id}.string', this.value)">${box.defaultString || ''}</textarea>
         `;
     }
     if (type === 'VARIABLE') {
