@@ -15,8 +15,9 @@ export function generateTemplate(lines, eventName) {
     const switchKeywords = new Map();
     const messageKeywords = new Map();
     const moveKeywords = new Map();
-    const usedGraphicKeywords = new Set(); // Track used G# keywords
-    const sheetGraphicUpdates = new Map(); // Track G# keywords per sheet for graphic replacement
+    const variableKeywords = new Map(); // Added for VARIABLE keywords
+    const usedGraphicKeywords = new Set();
+    const sheetGraphicUpdates = new Map();
 
     for (let i = 0; i < modifiedLines.length; i++) {
         let line = modifiedLines[i].trim();
@@ -57,11 +58,11 @@ export function generateTemplate(lines, eventName) {
                 if (comment.startsWith('G#')) {
                     const keyword = comment.slice(2).split(/\s+/)[0];
                     if (keyword && graphicGuid && !usedGraphicKeywords.has(keyword)) {
-                        usedGraphicKeywords.add(keyword); // Mark keyword as used
+                        usedGraphicKeywords.add(keyword);
                         graphicKeywords.set(keyword, {
                             sheetName,
                             guid: graphicGuid,
-                            motion: motion || '' // Use empty string if motion is missing
+                            motion: motion || ''
                         });
                         logDebug(`Found G#${keyword} in sheet ${sheetName} with GUID ${graphicGuid} and motion ${motion || 'none'}`);
                         const box = {
@@ -71,7 +72,8 @@ export function generateTemplate(lines, eventName) {
                             defaultString: motion || '',
                             defaultInteger: '',
                             category: 'キャラクターグラフィック',
-                            type: 'GRAPHICAL'
+                            type: 'GRAPHICAL',
+                            options: {}
                         };
                         settingBoxes.push(box);
                         editedValues.settings[keyword] = {
@@ -84,9 +86,8 @@ export function generateTemplate(lines, eventName) {
                         };
                         logDebug(`Added graphic template for keyword ${keyword} from sheet ${sheetName}`);
                     }
-                    // Store G# keyword for this sheet to update グラフィック
                     if (keyword && graphicGuid) {
-                        sheetGraphicUpdates.set(sheetName, { keyword, lineIndex: currentSheetStart + 1 }); // +1 for グラフィック line
+                        sheetGraphicUpdates.set(sheetName, { keyword, lineIndex: currentSheetStart + 1 });
                         logDebug(`Scheduled グラフィック update for sheet ${sheetName} to |Guid|${keyword}|`);
                     }
                 } else if (comment.startsWith('#')) {
@@ -100,6 +101,7 @@ export function generateTemplate(lines, eventName) {
                             isSwitch: false,
                             isMessage: false,
                             isMove: false,
+                            isVariable: false,
                             lineIndex: i
                         };
                     }
@@ -108,6 +110,56 @@ export function generateTemplate(lines, eventName) {
             continue;
         }
         if (inScript && lastComment) {
+            if (line.startsWith('コマンド\tVARIABLE')) {
+                logDebug(`Detected VARIABLE after #${lastComment.id} at line ${i + 1}`);
+                lastComment.isVariable = true;
+                if (!variableKeywords.has(lastComment.id)) {
+                    let defaultInt = '0';
+                    let integerCount = 0;
+                    for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
+                        const subLine = modifiedLines[j].trim();
+                        if (subLine.startsWith('整数')) {
+                            integerCount++;
+                            if (integerCount === 3) {
+                                defaultInt = subLine.replace('整数', '').trim();
+                                const prefix = modifiedLines[j].match(/^\t*/)[0];
+                                modifiedLines[j] = `${prefix}整数\t|整数|${lastComment.id}|`;
+                                logDebug(`Updated VARIABLE third 整数 to |整数|${lastComment.id}| at line ${j + 1}`);
+                                break;
+                            }
+                        }
+                    }
+                    variableKeywords.set(lastComment.id, {
+                        desc: `${lastComment.id} variable`,
+                        int: defaultInt
+                    });
+                    const box = {
+                        id: lastComment.id,
+                        desc: `${lastComment.id} variable`,
+                        defaultGuid: '',
+                        defaultString: '',
+                        defaultInteger: defaultInt,
+                        category: '数値',
+                        type: 'VARIABLE',
+                        options: {
+                            最大: '999999',
+                            最小: '0'
+                        }
+                    };
+                    settingBoxes.push(box);
+                    editedValues.settings[lastComment.id] = {
+                        id: lastComment.id,
+                        desc: box.desc,
+                        guid: '',
+                        string: '',
+                        int: defaultInt,
+                        type: 'VARIABLE'
+                    };
+                    logDebug(`Added variable template for keyword ${lastComment.id} with default int: ${defaultInt}`);
+                }
+                lastComment = null;
+                continue;
+            }
             if (line.startsWith('コマンド\tITEM') || line.startsWith('コマンド\tIFITEM')) {
                 logDebug(`Detected ITEM after #${lastComment.id} at line ${i + 1}`);
                 lastComment.isItem = true;
@@ -123,7 +175,8 @@ export function generateTemplate(lines, eventName) {
                         defaultString: '',
                         defaultInteger: '',
                         category: 'アイテム',
-                        type: 'ITEM'
+                        type: 'ITEM',
+                        options: {}
                     };
                     settingBoxes.push(box);
                     editedValues.settings[lastComment.id] = {
@@ -161,7 +214,8 @@ export function generateTemplate(lines, eventName) {
                         defaultString: '',
                         defaultInteger: '',
                         category: 'スイッチ',
-                        type: 'SWITCH'
+                        type: 'SWITCH',
+                        options: {}
                     };
                     settingBoxes.push(box);
                     editedValues.settings[lastComment.id] = {
@@ -210,7 +264,8 @@ export function generateTemplate(lines, eventName) {
                         defaultString: messageText,
                         defaultInteger: '',
                         category: '文章',
-                        type: 'MESSAGE'
+                        type: 'MESSAGE',
+                        options: {}
                     };
                     settingBoxes.push(box);
                     editedValues.settings[lastComment.id] = {
@@ -258,7 +313,8 @@ export function generateTemplate(lines, eventName) {
                         defaultString: spot,
                         defaultInteger: '',
                         category: 'マップ座標',
-                        type: 'MAP_POSITION'
+                        type: 'MAP_POSITION',
+                        options: {}
                     };
                     settingBoxes.push(mapPosBox);
                     editedValues.settings[`${lastComment.id}-mappos`] = {
@@ -278,7 +334,8 @@ export function generateTemplate(lines, eventName) {
                         defaultInteger: orientation,
                         category: '方向',
                         type: 'ORIENTATION',
-                        option: '変更しないを追加'
+                        option: '変更しないを追加',
+                        options: {}
                     };
                     settingBoxes.push(orientationBox);
                     editedValues.settings[`${lastComment.id}-orientation`] = {
@@ -312,7 +369,6 @@ export function generateTemplate(lines, eventName) {
         }
     }
 
-    // Apply グラフィック updates for sheets with G# comments
     sheetGraphicUpdates.forEach(({ keyword, lineIndex }, sheetName) => {
         if (lineIndex >= 0 && lineIndex < modifiedLines.length) {
             modifiedLines[lineIndex] = `\t\tグラフィック\t|Guid|${keyword}|`;
@@ -330,7 +386,7 @@ export function generateTemplate(lines, eventName) {
             `\t\t設定ID\t${keyword}`,
             `\t\t説明\t${sheetName} graphic`,
             `\t\tデフォルトGuid\t${guid}`,
-            ...(motion ? [`\t\tデフォルト文字列\t${motion}`] : []), // Only include motion if it exists
+            ...(motion ? [`\t\tデフォルト文字列\t${motion}`] : []),
             `\t設定ボックス終了`
         ].join('\n')) : []),
         ...(itemKeywords.size ? Array.from(itemKeywords.entries()).map(([keyword, { desc, guid }]) => [
@@ -362,6 +418,15 @@ export function generateTemplate(lines, eventName) {
             `\t\t設定ID\t${keyword}-orientation`,
             `\t\t説明\tOrientation After Movement`,
             `\t\tオプション\t変更しないを追加`,
+            `\t設定ボックス終了`
+        ].join('\n')) : []),
+        ...(variableKeywords.size ? Array.from(variableKeywords.entries()).map(([keyword, { desc, int }]) => [
+            `\t設定ボックス\t数値`,
+            `\t\t設定ID\t${keyword}`,
+            `\t\t説明\t${desc}`,
+            `\t\tデフォルト整数\t${int}`,
+            `\t\tオプション\t最大\t999999`,
+            `\t\tオプション\t最小\t0`,
             `\t設定ボックス終了`
         ].join('\n')) : []),
         `テンプレート定義終了`

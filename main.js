@@ -50,9 +50,9 @@ function exportFile() {
 
         // Generate updated template section
         const newTemplateLines = [
-            `テンプレート定義\t${editedValues.title || 'Default Title'}`, // Include title
+            `テンプレート定義\t${editedValues.title || 'Default Title'}`,
             `\t設定ボックス\t説明文`,
-            `\t\tデフォルト文字列\t${editedValues.description || ''}`, // Include description
+            `\t\tデフォルト文字列\t${editedValues.description || ''}`,
             `\t設定ボックス終了`
         ];
 
@@ -64,7 +64,7 @@ function exportFile() {
                     `\t\t設定ID\t${keyword}`,
                     `\t\t説明\t${settings.desc || `${keyword} graphic`}`,
                     `\t\tデフォルトGuid\t${settings.guid || ''}`,
-                    ...(settings.string ? [`\t\tデフォルト文字列\t${settings.string}`] : []), // Only include if motion exists
+                    ...(settings.string ? [`\t\tデフォルト文字列\t${settings.string}`] : []),
                     `\t設定ボックス終了`
                 );
             } else if (settings.type === 'ITEM') {
@@ -104,6 +104,16 @@ function exportFile() {
                     `\t\tオプション\t変更しないを追加`,
                     `\t設定ボックス終了`
                 );
+            } else if (settings.type === 'VARIABLE') {
+                newTemplateLines.push(
+                    `\t設定ボックス\t数値`,
+                    `\t\t設定ID\t${keyword}`,
+                    `\t\t説明\t${settings.desc || `${keyword} variable`}`,
+                    `\t\tデフォルト整数\t${settings.int || '0'}`,
+                    `\t\tオプション\t最大\t${settings.max || '999999'}`,
+                    `\t\tオプション\t最小\t${settings.min || '0'}`,
+                    `\t設定ボックス終了`
+                );
             }
         });
 
@@ -132,10 +142,46 @@ function exportFile() {
             logDebug(`Inserted new template section at line ${insertIndex + 1}`);
         }
 
+        // Update VARIABLE commands with new integer values
+        let inScript = false;
+        Object.entries(editedValues.settings).forEach(([keyword, settings]) => {
+            if (settings.type === 'VARIABLE') {
+                for (let i = 0; i < modifiedLines.length; i++) {
+                    const line = modifiedLines[i].trim();
+                    if (line.startsWith('スクリプト')) {
+                        inScript = true;
+                        continue;
+                    }
+                    if (line.startsWith('スクリプト終了')) {
+                        inScript = false;
+                        continue;
+                    }
+                    if (inScript && line.startsWith('コマンド\tCOMMENT')) {
+                        if (i + 1 < modifiedLines.length && modifiedLines[i + 1].trim().startsWith('文字列')) {
+                            const comment = modifiedLines[i + 1].replace('文字列', '').trim();
+                            if (comment === `#${keyword}` && i + 2 < modifiedLines.length && modifiedLines[i + 2].trim().startsWith('コマンド\tVARIABLE')) {
+                                let integerCount = 0;
+                                for (let j = i + 3; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
+                                    if (modifiedLines[j].trim().startsWith('整数')) {
+                                        integerCount++;
+                                        if (integerCount === 3) {
+                                            const prefix = modifiedLines[j].match(/^\t*/)[0];
+                                            modifiedLines[j] = `${prefix}整数\t|整数|${keyword}|`;
+                                            logDebug(`Updated VARIABLE 整数 for ${keyword} at line ${j + 1}`);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
         const recreatedFile = modifiedLines.join('\n');
         logDebug('Exported file content:\n' + recreatedFile);
 
-        // Get filename from inputs
         const filenameId = document.getElementById('filenameId').value || '090000';
         const filenameString = document.getElementById('filenameString').value.trim();
         const filename = filenameString ? `${filenameId}_${filenameString}.txt` : `${filenameId}.txt`;
@@ -159,7 +205,7 @@ function exportFile() {
 
 function updateSettingBox(lines, boxLines, startIndex, idMapping) {
     let settingId = '', newSettingId = '';
-    let indices = { guid: -1, string: -1, desc: -1, int: -1, id: -1 };
+    let indices = { guid: -1, string: -1, desc: -1, int: -1, id: -1, max: -1, min: -1 };
     for (let j = 0; j < boxLines.length; j++) {
         const line = boxLines[j].trim();
         if (line.startsWith('設定ID')) {
@@ -170,6 +216,8 @@ function updateSettingBox(lines, boxLines, startIndex, idMapping) {
         else if (line.startsWith('デフォルト文字列')) indices.string = startIndex + j;
         else if (line.startsWith('説明')) indices.desc = startIndex + j;
         else if (line.startsWith('デフォルト整数')) indices.int = startIndex + j;
+        else if (line.startsWith('オプション\t最大')) indices.max = startIndex + j;
+        else if (line.startsWith('オプション\t最小')) indices.min = startIndex + j;
     }
     const settings = editedValues.settings[settingId] || {};
     if (settings.id && settings.id !== settingId) {
@@ -197,6 +245,14 @@ function updateSettingBox(lines, boxLines, startIndex, idMapping) {
         if (settings.int && indices.int !== -1) {
             lines[indices.int] = `\tデフォルト整数\t${settings.int}`;
             logDebug(`Updated integer for ${settingId} at line ${indices.int + 1}`);
+        }
+        if (settings.max && indices.max !== -1) {
+            lines[indices.max] = `\tオプション\t最大\t${settings.max}`;
+            logDebug(`Updated max for ${settingId} at line ${indices.max + 1}`);
+        }
+        if (settings.min && indices.min !== -1) {
+            lines[indices.min] = `\tオプション\t最小\t${settings.min}`;
+            logDebug(`Updated min for ${settingId} at line ${indices.min + 1}`);
         }
     }
 }

@@ -25,7 +25,6 @@ export function displayTemplate({ title, description, settingBoxes }) {
     displayDiv.innerHTML = html || '<p>No valid template data found.</p>';
     logDebug(`Displayed ${settingBoxes.length} setting boxes`);
 
-    // Add event listeners for title and description
     document.getElementById('title-input').addEventListener('input', (e) => {
         updateField('title', e.target.value);
     });
@@ -33,7 +32,6 @@ export function displayTemplate({ title, description, settingBoxes }) {
         updateField('description', e.target.value);
     });
 
-    // Add event listeners for each setting box
     settingBoxes.forEach(box => {
         document.getElementById(`id-input-${box.id}`).addEventListener('input', (e) => {
             updateField(`settings.${box.id}.id`, e.target.value);
@@ -64,10 +62,14 @@ function renderInput(type, box) {
             <textarea id="string-input-${box.id}" ${type === 'MESSAGE' ? 'readonly' : ''} onchange="updateField('settings.${box.id}.string', this.value)">${box.defaultString || ''}</textarea>
         `;
     }
-    if (type === 'INTEGER') {
+    if (type === 'VARIABLE') {
         html += `
             <label for="int-input-${box.id}">Value:</label>
             <input type="number" id="int-input-${box.id}" value="${box.defaultInteger || '0'}" onchange="updateField('settings.${box.id}.int', this.value)">
+            <label for="min-input-${box.id}">Minimum:</label>
+            <input type="number" id="min-input-${box.id}" value="${box.options?.最小 || '0'}" onchange="updateField('settings.${box.id}.min', this.value)">
+            <label for="max-input-${box.id}">Maximum:</label>
+            <input type="number" id="max-input-${box.id}" value="${box.options?.最大 || '999999'}" onchange="updateField('settings.${box.id}.max', this.value)">
         `;
     }
     if (type === 'MAP_POSITION') {
@@ -77,7 +79,6 @@ function renderInput(type, box) {
         `;
     }
     if (type === 'ORIENTATION') {
-        // Display orientation as read-only text
         const orientationLabel = box.defaultInteger === '-1' ? 'No Change' :
                                 box.defaultInteger === '0' ? 'Up' :
                                 box.defaultInteger === '1' ? 'Right' :

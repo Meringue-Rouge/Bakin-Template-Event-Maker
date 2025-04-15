@@ -8,7 +8,8 @@ export function parseTemplate(lines) {
     const itemKeywords = new Map();
     const messageKeywords = new Map();
     const moveKeywords = new Map();
-    const usedGraphicKeywords = new Set(); // Track used G# keywords
+    const variableKeywords = new Map(); // Added for VARIABLE keywords
+    const usedGraphicKeywords = new Set();
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -47,18 +48,39 @@ export function parseTemplate(lines) {
                 if (comment.startsWith('G#')) {
                     const keyword = comment.slice(2).split(/\s+/)[0];
                     if (keyword && graphicGuid && !usedGraphicKeywords.has(keyword)) {
-                        usedGraphicKeywords.add(keyword); // Mark keyword as used
+                        usedGraphicKeywords.add(keyword);
                         graphicKeywords.set(keyword, {
                             sheetName,
                             guid: graphicGuid,
-                            motion: motion || '' // Use empty string if motion is missing
+                            motion: motion || ''
                         });
                         logDebug(`Found G#${keyword} in sheet ${sheetName} with GUID ${graphicGuid} and motion ${motion || 'none'}`);
                     }
                 } else if (comment.startsWith('#')) {
                     const keyword = comment.slice(1).split(/\s+/)[0];
                     if (keyword) {
-                        if (i + 3 < lines.length && lines[i + 2].trim().startsWith('コマンド\tIFITEM')) {
+                        // Check for VARIABLE command
+                        if (i + 2 < lines.length && lines[i + 2].trim().startsWith('コマンド\tVARIABLE')) {
+                            let defaultInt = '0';
+                            let integerCount = 0;
+                            for (let j = i + 3; j < lines.length && !lines[j].trim().startsWith('コマンド終了'); j++) {
+                                const subLine = lines[j].trim();
+                                if (subLine.startsWith('整数')) {
+                                    integerCount++;
+                                    const value = subLine.replace('整数', '').trim();
+                                    // Third integer field (index 3: after first 整数, ローカル変数, second 整数)
+                                    if (integerCount === 3) {
+                                        defaultInt = value;
+                                        variableKeywords.set(keyword, {
+                                            desc: `${keyword} variable`,
+                                            int: defaultInt
+                                        });
+                                        logDebug(`Found #${keyword} for VARIABLE in sheet ${sheetName} with default int: ${defaultInt}`);
+                                        break;
+                                    }
+                                }
+                            }
+                        } else if (i + 3 < lines.length && lines[i + 2].trim().startsWith('コマンド\tIFITEM')) {
                             itemKeywords.set(keyword, {
                                 guid: '',
                                 desc: `${keyword} item`
@@ -97,7 +119,6 @@ export function parseTemplate(lines) {
             }
             continue;
         }
-        // ... (rest of the existing code for setting boxes remains unchanged)
         if (line.startsWith('設定ボックス')) {
             if (currentBox && (currentBox.id || currentBox.category === '説明文')) {
                 if (currentBox.category === '説明文') description = currentBox.defaultString || '';
@@ -111,7 +132,8 @@ export function parseTemplate(lines) {
                 defaultString: '',
                 defaultInteger: '',
                 category: currentCategory,
-                type: typeMap[currentCategory] || 'UNKNOWN'
+                type: typeMap[currentCategory] || 'UNKNOWN',
+                options: {} // Added to store min/max for VARIABLE
             };
             continue;
         }
@@ -121,7 +143,15 @@ export function parseTemplate(lines) {
             else if (line.startsWith('デフォルトGuid')) currentBox.defaultGuid = line.replace('デフォルトGuid', '').trim();
             else if (line.startsWith('デフォルト文字列')) currentBox.defaultString = line.replace('デフォルト文字列', '').trim();
             else if (line.startsWith('デフォルト整数')) currentBox.defaultInteger = line.replace('デフォルト整数', '').trim();
-            else if (line.startsWith('オプション')) currentBox.option = line.replace('オプション', '').trim();
+            else if (line.startsWith('オプション')) {
+                const option = line.replace('オプション', '').trim();
+                const [key, value] = option.split(/\s+/).map(s => s.trim());
+                if (key === '最大' || key === '最小') {
+                    currentBox.options[key] = value;
+                } else {
+                    currentBox.option = option;
+                }
+            }
         }
         if (line.startsWith('設定ボックス終了') && currentBox) {
             if (currentBox.category === '説明文') description = currentBox.defaultString || '';
@@ -139,16 +169,16 @@ export function parseTemplate(lines) {
         }
     }
 
-    // Add graphic template boxes for G# keywords
     graphicKeywords.forEach(({ sheetName, guid, motion }, keyword) => {
         const box = {
             id: keyword,
             desc: `${sheetName} graphic`,
             defaultGuid: guid,
-            defaultString: motion, // Motion can be empty
+            defaultString: motion,
             defaultInteger: '',
             category: 'キャラクターグラフィック',
-            type: 'GRAPHICAL'
+            type: 'GRAPHICAL',
+            options: {}
         };
         settingBoxes.push(box);
         editedValues.settings[keyword] = {
@@ -162,7 +192,6 @@ export function parseTemplate(lines) {
         logDebug(`Added graphic template for keyword ${keyword} from sheet ${sheetName}`);
     });
 
-    // ... (rest of the existing code for item, message, move templates remains unchanged)
     itemKeywords.forEach(({ guid, desc }, keyword) => {
         const box = {
             id: keyword,
@@ -171,7 +200,8 @@ export function parseTemplate(lines) {
             defaultString: '',
             defaultInteger: '',
             category: 'アイテム',
-            type: 'ITEM'
+            type: 'ITEM',
+            options: {}
         };
         settingBoxes.push(box);
         editedValues.settings[keyword] = {
@@ -193,7 +223,8 @@ export function parseTemplate(lines) {
             defaultString: string,
             defaultInteger: '',
             category: '文章',
-            type: 'MESSAGE'
+            type: 'MESSAGE',
+            options: {}
         };
         settingBoxes.push(box);
         editedValues.settings[keyword] = {
@@ -215,7 +246,8 @@ export function parseTemplate(lines) {
             defaultString: spot,
             defaultInteger: '',
             category: 'マップ座標',
-            type: 'MAP_POSITION'
+            type: 'MAP_POSITION',
+            options: {}
         };
         settingBoxes.push(mapPosBox);
         editedValues.settings[`${keyword}-mappos`] = {
@@ -236,7 +268,8 @@ export function parseTemplate(lines) {
             defaultInteger: orientation,
             category: '方向',
             type: 'ORIENTATION',
-            option: '変更しないを追加'
+            option: '変更しないを追加',
+            options: {}
         };
         settingBoxes.push(orientationBox);
         editedValues.settings[`${keyword}-orientation`] = {
@@ -249,6 +282,32 @@ export function parseTemplate(lines) {
             option: '変更しないを追加'
         };
         logDebug(`Added orientation template for keyword ${keyword}-orientation with value: ${orientation}`);
+    });
+
+    variableKeywords.forEach(({ desc, int }, keyword) => {
+        const box = {
+            id: keyword,
+            desc: desc,
+            defaultGuid: '',
+            defaultString: '',
+            defaultInteger: int,
+            category: '数値',
+            type: 'VARIABLE',
+            options: {
+                最大: '999999',
+                最小: '0'
+            }
+        };
+        settingBoxes.push(box);
+        editedValues.settings[keyword] = {
+            id: keyword,
+            desc: box.desc,
+            guid: '',
+            string: '',
+            int: int,
+            type: 'VARIABLE'
+        };
+        logDebug(`Added variable template for keyword ${keyword} with default int: ${int}`);
     });
 
     editedValues.title = title || eventName || '';
