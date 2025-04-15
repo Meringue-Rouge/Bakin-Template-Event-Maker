@@ -80,9 +80,16 @@ Using the **exact same keyword multiple times** throughout an event and it's she
 > ***Use the same keyword if you have multiple teleport events that need to go to the same position.
 > Ex: Use the same note keyword over both a Check Event Switch Event and the Event Switch On/Off event to check if the switch is on or off, before turning that same switch on or off.***
 
-## EventSheet Graphics
+## Graphics
 
-**Usage**: For every EventSheet (but not parallel sheets) that you want to be able to modify the graphics, but not through an event, create a note written in the format of **G#keyword**, with keyword being a word of your choice.
+- [X] **EventSheet Graphics**
+- [X] **Change Event Graphic / イベントのグラフィックを変更**
+
+![Capture d'écran 2025-04-15 113149-small](https://github.com/user-attachments/assets/aa258e1c-f57a-4c71-9f87-94189d451745)
+
+**Usage (EventSheet Graphics Specific)**: For every EventSheet (but not parallel sheets) that you want to be able to modify the graphics, but not through an event, create a note written in the format of **G#keyword**, with keyword being a word of your choice.
+
+**Usage (Change Event Graphic)**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
 
 > ***Only one G#keyword per eventsheet allowed. You can reuse the same G#keyword on different sheets if you want different sheets to share the same changable model.***
 
