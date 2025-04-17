@@ -19,6 +19,8 @@ Advantages when using Template Events:
   - The tedious part is that you have to double-click previously placed ones, but it's arguably better than without it. Less better than the Cast system which auto-updates placed entities without any action on your part, assuming you are willing to deal with the limitations of that system regarding certain types of entities.
 - Re-editing a placed template event is easy.
 
+> [!CAUTION]
+> Template Events weren't designed for the average user to build, and thus, bad event and note configurations, or website bugs, can lead to invalid or crash-inducing template events. Under any circumstances, DO NOT SAVE A PROJECT WITH A CORRUPTED TEMPLATE EVENT. It's probably fine, but just saying in case some horrible corruption can happen. Always use version control software for your projects to revert to a previous version in case something goes horribly wrong. By using the software, you acknowledge that you won't any contributor working on this tool for damages.
 
 # Supported Event Types
 ### How to use Keywords
