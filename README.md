@@ -15,7 +15,8 @@ This website lets you convert, after adding a few **Note / 注釈 events**, *any
 
 Advantages when using Template Events:
 - Ease of use once parametered to quickly create duplicates of a complicated event with parameters changed through a light-weight and easy to use UI of your own making.
-- Placed template events can be (manually) auto-updated with updates if you double-click on a placed one and confirm.
+- ~~Placed template events can be (manually) auto-updated with updates if you double-click on a placed one and confirm.~~
+  - Update: Upon closing and re-opening Bakin, existing template events revert into normal events. My bad.
   - The tedious part is that you have to double-click previously placed ones, but it's arguably better than without it. Less better than the Cast system which auto-updates placed entities without any action on your part, assuming you are willing to deal with the limitations of that system regarding certain types of entities.
 - Re-editing a placed template event is easy.
 
