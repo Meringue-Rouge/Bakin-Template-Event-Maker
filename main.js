@@ -88,6 +88,7 @@ function exportFile() {
                     `\t設定ボックス\tスイッチ`,
                     `\t\t設定ID\t${keyword}`,
                     `\t\t説明\t${settings.desc || `${keyword} switch`}`,
+                    ...(settings.string ? [`\t\tデフォルト文字列\t${settings.string}`] : []),
                     `\t設定ボックス終了`
                 );
             } else if (settings.type === 'MESSAGE') {
