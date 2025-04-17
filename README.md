@@ -124,6 +124,9 @@ The initial #keyword for the event will dictate the dialogue's word contents, so
 
 **Usage (EventSheet Graphics Specific)**: For every EventSheet (but not parallel sheets) that you want to be able to modify the graphics, but not through an event, create a note written in the format of ``G#keyword``, with keyword being a word of your choice.
 
+> [!WARNING]
+> Do not place a `G#keyword` inside a parallel event, it will cause Bakin to convert it into a normal sheet and cause major issues for your event.
+
 **Usage (Change Event Graphic)**: Create a note just over each event that you want a template for, in the format of ``#keyword``, with keyword being a word of your choice.
 
 > ***Only one G#keyword per eventsheet allowed. You can reuse the same G#keyword on different sheets if you want different sheets to share the same changable model.***
