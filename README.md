@@ -26,7 +26,7 @@ Using the **exact same keyword multiple times** throughout an event and it's she
 > [!TIP]
 > The exact items that you specify when they have a #keyword do not matter, as they are replaced by the template's selection, so long as the #keywords you use make sense logically.
 
-**Usage**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
+**Usage**: Create a note just over each event that you want a template for, in the format of ``#keyword``, with keyword being a word of your choice.
 
 > ***If you are only checking for a single type of item, then using the same keyword for different events will only result in one template entry on the UI.
 > Ex: Use the same note keyword over both a Check Items Possessed Event and the Increase/Decrease Item event to check if the player has the item in question before giving said item.***
@@ -40,7 +40,7 @@ Using the **exact same keyword multiple times** throughout an event and it's she
 > [!TIP]
 > The exact switches that have a #keyword do not matter, as they are replaced by the template's selection, so long as the #keywords you use make sense.
 
-**Usage**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
+**Usage**: Create a note just over each event that you want a template for, in the format of ``#keyword``, with keyword being a word of your choice.
 
 > ***If you are only checking for a single switch, then using the same keyword for different events will only result in one template entry on the UI.
 > Ex: Use the same note keyword over both a Check Event Switch Event and the Event Switch On/Off event to check if the switch is on or off, before turning that same switch on or off.***
@@ -50,7 +50,7 @@ Using the **exact same keyword multiple times** throughout an event and it's she
 
 ![Capture d'écran 2025-04-15 105117-small](https://github.com/user-attachments/assets/647c686e-14f1-47f3-855e-c9e99e0c5b58)
 
-**Usage**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
+**Usage**: Create a note just over each event that you want a template for, in the format of ``#keyword``, with keyword being a word of your choice.
 
 > [!WARNING]
 > This only applies to the ***value*** being assigned to a variable (user can define the value but not the variable to receive said value outside of what was defined in the event). You cannot (at this time) assign the variable box to change.
@@ -61,7 +61,7 @@ Using the **exact same keyword multiple times** throughout an event and it's she
 ## Money
 - [X] **Increase/Decrease Money / お金を増やす／減らす**
 
-**Usage**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
+**Usage**: Create a note just over each event that you want a template for, in the format of ``#keyword``, with keyword being a word of your choice.
 
 > ***If you are only checking for a single switch, then using the same keyword for different events will only result in one template entry on the UI.
 > Ex: Use the same note keyword over both a Check Event Switch Event and the Event Switch On/Off event to check if the switch is on or off, before turning that same switch on or off.***
@@ -72,7 +72,7 @@ Using the **exact same keyword multiple times** throughout an event and it's she
 
 ![Capture d'écran 2025-04-14 122535-small](https://github.com/user-attachments/assets/5baa9903-3dab-4c04-9c92-e6883639e1c5)
 
-**Usage**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
+**Usage**: Create a note just over each event that you want a template for, in the format of ``#keyword``, with keyword being a word of your choice.
 > [!NOTE]
 > This will create both a map position and orientation template object on the website UI, per unique keyword.
 **Note**: In Bakin, using more than one teleport template object will result in only the last one having the map rendered. Entities will still be rendered on the other ui map.
@@ -83,7 +83,7 @@ Using the **exact same keyword multiple times** throughout an event and it's she
 ## Battle
 - [X] **Execute Battle and Check Results / バトル実行と結果の確認**
 
-**Usage**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
+**Usage**: Create a note just over each event that you want a template for, in the format of ``#keyword``, with keyword being a word of your choice.
 > [!NOTE]
 > This will create both an enemy and a battle map template object on the website UI, per unique keyword.
 > Additionally, only one enemy is currently supported. To get around this without converting the event, make an enemy without a model, make a common event that runs at the start of battle checking if this modeless enemy is present, and if it is, spawn and replace the enemy with the enemies of your choice.
@@ -93,9 +93,27 @@ Using the **exact same keyword multiple times** throughout an event and it's she
 ## Dialogue
 - [X] **Display Message / メッセージを表示**
 
-**Usage**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
+**Usage**: Create a note just over each event that you want a template for, in the format of ``#keyword``, with keyword being a word of your choice.
 
-Conversations coming soon.
+## Conversations
+- [X] **Display Conversation / 会話を表示**
+
+Conversations are a bit more complicated to set up.
+- For each character model you want to be able to replace, you'll need to create a Note event in the format of ``C#keyword``, with keyword being any word of your choice.
+- Above the conversation event, create a Note event in the format of ``#keyword[CL,CR,eventL,eventR]``.
+  - Replace CL with the C#keyword (without C#) for the left character in this event.
+  - Replace CR with the C#keyword (without C#) for the right character in this event.
+  - If you wish to keep the original animation assigned to the left character in this dialogue event (as the GUI offers an animation that will override this animation by default), keep eventL, otherwise delete theword but keep the structure intact (so don't delete the comma).
+  - If you wish to keep the original animation assigned to the right character in this dialogue event (as the GUI offers an animation that will override this animation by default), keep eventR, otherwise remove eventR.
+
+The initial #keyword for the event will dictate the dialogue's word contents, so remember to use a different #keyword for each dialogue event, otherwise you'll have duplicate conversations.
+
+![Capture d'écran 2025-04-15 172342-small](https://github.com/user-attachments/assets/65f0d120-7129-4d99-961b-940b579f831f)
+![Capture d'écran 2025-04-15 172330-small](https://github.com/user-attachments/assets/81ed8e57-b3cb-4a90-9881-9aa7243af76e)
+![Capture d'écran 2025-04-15 172350-small](https://github.com/user-attachments/assets/c3ffa866-38a5-4f2a-9ec2-23cb9b563ed0)
+![Capture d'écran 2025-04-15 172355-small](https://github.com/user-attachments/assets/8e8212f9-16e4-4581-aeed-03573581f70a)
+
+
 
 ## Graphics
 
@@ -104,9 +122,9 @@ Conversations coming soon.
 
 ![Capture d'écran 2025-04-15 113149-small](https://github.com/user-attachments/assets/aa258e1c-f57a-4c71-9f87-94189d451745)
 
-**Usage (EventSheet Graphics Specific)**: For every EventSheet (but not parallel sheets) that you want to be able to modify the graphics, but not through an event, create a note written in the format of **G#keyword**, with keyword being a word of your choice.
+**Usage (EventSheet Graphics Specific)**: For every EventSheet (but not parallel sheets) that you want to be able to modify the graphics, but not through an event, create a note written in the format of ``G#keyword``, with keyword being a word of your choice.
 
-**Usage (Change Event Graphic)**: Create a note just over each event that you want a template for, in the format of **#keyword**, with keyword being a word of your choice.
+**Usage (Change Event Graphic)**: Create a note just over each event that you want a template for, in the format of ``#keyword``, with keyword being a word of your choice.
 
 > ***Only one G#keyword per eventsheet allowed. You can reuse the same G#keyword on different sheets if you want different sheets to share the same changable model.***
 
