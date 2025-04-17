@@ -8,6 +8,18 @@ https://meringue-rouge.github.io/Bakin-Template-Event-Maker/<br><br>
 > [!WARNING]
 > Website is in BETA, a lot of features aren't supported. If you encounter bugs, please submit an issue here, or contact me on X ([@ingenoireP](https://x.com/IngenoireP)). Thanks, and hopefully this tool helps you out!
 
+# What are Template Events?
+Template events are the prebuilt events that ship with Bakin, with quick generation for common RPG objects like doors and switches, with all the event logic made and ready to go, but it offers the user the ability to swap key aspects of the event, essentially through parameters.
+
+This website lets you convert, after adding a few **Note / 注釈 events**, *any event you have into a template event*. If you wanted to create a very specific and complicated entity, but dreaded having to adjust parameters, either by using the Cast system and throw some weird workarounds through global variable reading, or by copying and pasting an entity and having to meticuously edit each and every mention of one parameter (some parameters like an item can't be set to a variable), then this is the tool for you.
+
+Advantages when using Template Events:
+- Ease of use once parametered to quickly create duplicates of a complicated event with parameters changed through a light-weight and easy to use UI of your own making.
+- Placed template events can be (manually) auto-updated with updates if you double-click on a placed one and confirm.
+  - The tedious part is that you have to double-click previously placed ones, but it's arguably better than without it. Less better than the Cast system which auto-updates placed entities without any action on your part, assuming you are willing to deal with the limitations of that system regarding certain types of entities.
+- Re-editing a placed template event is easy.
+
+
 # Supported Event Types
 ### How to use Keywords
 These events can have a "note" event placed just over the event you want to be able to change through the UI in Bakin. The format of the note must be `#keyword`, with `keyword` being any word you want that you can understand (like a variable of sorts). *This will only apply to the event immediately under it.*
