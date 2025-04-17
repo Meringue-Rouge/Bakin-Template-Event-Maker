@@ -333,6 +333,23 @@ function exportFile() {
             }
         });
 
+        // Convert commas to dots for specific fields (判定拡張X, 判定拡張Z, 判定拡張Y)
+        const fieldsToConvert = ['判定拡張X', '判定拡張Z', '判定拡張Y'];
+        for (let i = 0; i < modifiedLines.length; i++) {
+            const line = modifiedLines[i].trim();
+            for (const field of fieldsToConvert) {
+                if (line.startsWith(field)) {
+                    const value = line.replace(field, '').trim();
+                    if (value.includes(',')) {
+                        const newValue = value.replace(',', '.');
+                        modifiedLines[i] = `\t${field}\t${newValue}`;
+                        logDebug(`Converted ${field} value from ${value} to ${newValue} at line ${i + 1}`);
+                    }
+                    break;
+                }
+            }
+        }
+
         const recreatedFile = modifiedLines.join('\n');
         logDebug('Exported file content:\n' + recreatedFile);
 
