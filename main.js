@@ -145,27 +145,65 @@ function exportFile() {
 
         newTemplateLines.push(`テンプレート定義終了`);
 
-        // Replace or insert template section
-        let templateStartIndex = -1, templateEndIndex = -1;
-        for (let i = 0; i < modifiedLines.length; i++) {
+        // Find existing Guid or set default
+        let eventGuid = '4a9c0d55-620b-488f-b8dd-d27443dd39af'; // Default Guid
+        let guidIndex = modifiedLines.findIndex(line => line.trim().startsWith('Guid'));
+        if (guidIndex !== -1) {
+            eventGuid = modifiedLines[guidIndex].replace('Guid', '').trim();
+        }
+
+        // Remove all existing template sections
+        let i = 0;
+        while (i < modifiedLines.length) {
             let line = modifiedLines[i].trim();
             if (line.startsWith('テンプレート定義') && !line.trim().startsWith('テンプレート定義終了')) {
-                templateStartIndex = i;
-            }
-            if (line.startsWith('テンプレート定義終了') && templateStartIndex !== -1) {
-                templateEndIndex = i;
-                break;
+                let startIndex = i;
+                while (i < modifiedLines.length && !modifiedLines[i].trim().startsWith('テンプレート定義終了')) {
+                    i++;
+                }
+                if (i < modifiedLines.length && modifiedLines[i].trim().startsWith('テンプレート定義終了')) {
+                    i++; // Include the テンプレート定義終了 line
+                }
+                modifiedLines.splice(startIndex, i - startIndex);
+                i = startIndex; // Re-check the same index after removal
+            } else {
+                i++;
             }
         }
 
-        if (templateStartIndex !== -1 && templateEndIndex !== -1 && templateEndIndex >= templateStartIndex) {
-            modifiedLines.splice(templateStartIndex, templateEndIndex - templateStartIndex + 1, ...newTemplateLines);
-            logDebug(`Replaced template section from line ${templateStartIndex + 1} to ${templateEndIndex + 1}`);
-        } else {
-            let insertIndex = modifiedLines.findIndex(line => line.trim().startsWith('イベント名'));
+        // Remove existing Guid if it exists
+        guidIndex = modifiedLines.findIndex(line => line.trim().startsWith('Guid'));
+        if (guidIndex !== -1) {
+            modifiedLines.splice(guidIndex, 1);
+        }
+
+        // Find insertion point (before event name or sheet, or at start)
+        let insertIndex = modifiedLines.findIndex(line => line.trim().startsWith('イベント名'));
+        if (insertIndex === -1) {
+            insertIndex = modifiedLines.findIndex(line => line.trim().startsWith('シート'));
             if (insertIndex === -1) insertIndex = 0;
-            modifiedLines.splice(insertIndex, 0, ...newTemplateLines);
-            logDebug(`Inserted new template section at line ${insertIndex + 1}`);
+        }
+
+        // Find event name and store it for repositioning
+        let eventNameLine = null;
+        let eventNameIndex = modifiedLines.findIndex(line => line.trim().startsWith('イベント名'));
+        if (eventNameIndex !== -1) {
+            eventNameLine = modifiedLines[eventNameIndex];
+            modifiedLines.splice(eventNameIndex, 1); // Remove event name temporarily
+        }
+
+        // Insert new template section and Guid
+        modifiedLines.splice(insertIndex, 0, ...newTemplateLines, `Guid\t${eventGuid}`);
+        logDebug(`Inserted new template section and Guid at line ${insertIndex + 1}`);
+
+        // Reinsert event name after Guid
+        if (eventNameLine) {
+            modifiedLines.splice(insertIndex + newTemplateLines.length + 1, 0, eventNameLine);
+            logDebug(`Inserted イベント名 at line ${insertIndex + newTemplateLines.length + 2}`);
+        } else {
+            // If no event name was found, add a default one
+            modifiedLines.splice(insertIndex + newTemplateLines.length + 1, 0, `イベント名\t${editedValues.title || 'Default Event'}`);
+            logDebug(`Inserted default イベント名 at line ${insertIndex + newTemplateLines.length + 2}`);
         }
 
         // Update GRAPHIC, VARIABLE, MESSAGE, and BOSSBATTLE commands with new values
