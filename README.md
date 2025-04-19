@@ -146,6 +146,20 @@ The initial #keyword for the event will dictate the dialogue's word contents, so
 
 > ***Only one G#keyword per eventsheet allowed. You can reuse the same G#keyword on different sheets if you want different sheets to share the same changable model.***
 
+## EventSheet Conditions
+
+- [X] **Switch**
+
+![Capture d'écran 2025-04-19 192239-small](https://github.com/user-attachments/assets/ff962aad-d98f-4972-92f1-156885815736)
+![Capture d'écran 2025-04-19 192221-small](https://github.com/user-attachments/assets/fe5e9b71-145d-450e-8896-d6def06f4a63)
+
+You can make the switches contained within an eventsheet's run conditions.
+Since there's no way to leave comments inside of eventsheet conditions, by default, ALL eventsheet switches are displayed on the website, and if you don't turn on the "Enable Export" button on them, they will not be turned into parameters when exported. Eventsheets conditions referring to the same switch will be merged into one template object on the website and bakin.
+
+> [!IMPORTANT]
+> For the website to distinguish the different switches, unlike standard events in your sheet, in which the #keyword would handle the process (thus making whatever switch you used not important), here you NEED to make sure the switches are different according to your logic (in other words, you can't use one switch for every eventsheet switch condition and replace each one individually on the website).
+
+
 
 More events will be supported as I get to working on this tool.
 
