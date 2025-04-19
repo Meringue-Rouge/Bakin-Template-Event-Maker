@@ -62,6 +62,7 @@ Using the **exact same keyword multiple times** throughout an event and it's she
 
 ## Variable Box
 - [X] **Variable Box Assignment and Calculation / 変数ボックスへの代入と計算**
+- [X] **Assign to String Variable / 文字列変数への代入**
 
 ![Capture d'écran 2025-04-15 105117-small](https://github.com/user-attachments/assets/647c686e-14f1-47f3-855e-c9e99e0c5b58)
 
