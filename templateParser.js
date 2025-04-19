@@ -1,4 +1,4 @@
-import { originalLines, editedValues, logDebug, typeMap } from './utils.js';
+import { originalLines, editedValues, logDebug, typeMap, originalSwitchReferences } from './utils.js';
 
 export function parseTemplate(lines) {
     let title = '', description = '', settingBoxes = [], currentBox = null, currentCategory = '';
@@ -13,6 +13,7 @@ export function parseTemplate(lines) {
     const battleBackgroundKeywords = new Map();
     const moveKeywords = new Map();
     const variableKeywords = new Map();
+    const switchConditionKeywords = new Map();
     const usedGraphicKeywords = new Set();
 
     for (let i = 0; i < lines.length; i++) {
@@ -44,6 +45,26 @@ export function parseTemplate(lines) {
         }
         if (inSheet && line.startsWith('モーション')) {
             motion = line.replace('モーション', '').trim();
+            continue;
+        }
+        if (inSheet && line.startsWith('条件\tCOND_TYPE_SWITCH')) {
+            let referenceName = '';
+            let originalReferenceName = '';
+            for (let j = i + 1; j < lines.length && !lines[j].trim().startsWith('条件終了'); j++) {
+                const subLine = lines[j].trim();
+                if (subLine.startsWith('参照名')) {
+                    originalReferenceName = subLine.replace('参照名', '').trim();
+                    referenceName = originalReferenceName.replace(/\|文字列\|([^|]*)\|/, '$1') || `switch_${sheetName.toLowerCase().replace(/\s+/g, '_')}_${i}`;
+                    break;
+                }
+            }
+            const keyword = referenceName;
+            switchConditionKeywords.set(keyword, {
+                desc: `${sheetName} switch condition`,
+                string: referenceName
+            });
+            originalSwitchReferences.set(keyword, originalReferenceName);
+            logDebug(`Found COND_TYPE_SWITCH in sheet ${sheetName} with reference name: ${referenceName}, original: ${originalReferenceName} at line ${i + 1}`);
             continue;
         }
         if (inSheet && line.startsWith('コマンド\tCOMMENT')) {
@@ -221,7 +242,8 @@ export function parseTemplate(lines) {
                 defaultInteger: '',
                 category: currentCategory,
                 type: typeMap[currentCategory] || 'UNKNOWN',
-                options: {}
+                options: {},
+                enableExport: currentCategory === 'スイッチ条件' ? false : true
             };
             continue;
         }
@@ -244,6 +266,20 @@ export function parseTemplate(lines) {
         if (line.startsWith('設定ボックス終了') && currentBox) {
             if (currentBox.category === '説明文') description = currentBox.defaultString || '';
             else if (currentBox.id) settingBoxes.push(currentBox);
+            // Update editedValues.settings with the parsed box
+            if (currentBox.id && currentBox.type !== 'UNKNOWN') {
+                editedValues.settings[currentBox.id] = {
+                    id: currentBox.id,
+                    desc: currentBox.desc,
+                    guid: currentBox.defaultGuid,
+                    string: currentBox.defaultString,
+                    int: currentBox.defaultInteger,
+                    type: currentBox.type,
+                    options: currentBox.options,
+                    enableExport: currentBox.enableExport,
+                    originalReferenceName: originalSwitchReferences.get(currentBox.id)
+                };
+            }
             currentBox = null;
             currentCategory = '';
             continue;
@@ -266,7 +302,8 @@ export function parseTemplate(lines) {
             defaultInteger: '',
             category: '顔グラフィック',
             type: 'FACIAL GRAPHICS',
-            options: {}
+            options: {},
+            enableExport: true
         };
         settingBoxes.push(box);
         editedValues.settings[keyword] = {
@@ -289,7 +326,8 @@ export function parseTemplate(lines) {
             defaultInteger: '',
             category: 'キャラクターグラフィック',
             type: 'GRAPHICAL',
-            options: {}
+            options: {},
+            enableExport: true
         };
         settingBoxes.push(box);
         editedValues.settings[keyword] = {
@@ -312,7 +350,8 @@ export function parseTemplate(lines) {
             defaultInteger: '',
             category: 'アイテム',
             type: 'ITEM',
-            options: {}
+            options: {},
+            enableExport: true
         };
         settingBoxes.push(box);
         editedValues.settings[keyword] = {
@@ -335,7 +374,8 @@ export function parseTemplate(lines) {
             defaultInteger: '',
             category: '文章',
             type: 'MESSAGE',
-            options: {}
+            options: {},
+            enableExport: true
         };
         settingBoxes.push(box);
         editedValues.settings[keyword] = {
@@ -358,7 +398,8 @@ export function parseTemplate(lines) {
             defaultInteger: '',
             category: '文章',
             type: 'MESSAGE',
-            options: {}
+            options: {},
+            enableExport: true
         };
         settingBoxes.push(box);
         editedValues.settings[keyword] = {
@@ -385,7 +426,8 @@ export function parseTemplate(lines) {
             defaultInteger: '',
             category: 'モンスター',
             type: 'MONSTER',
-            options: {}
+            options: {},
+            enableExport: true
         };
         settingBoxes.push(box);
         editedValues.settings[keyword] = {
@@ -408,7 +450,8 @@ export function parseTemplate(lines) {
             defaultInteger: '',
             category: 'バトル背景',
             type: 'BATTLE BACKGROUND',
-            options: {}
+            options: {},
+            enableExport: true
         };
         settingBoxes.push(box);
         editedValues.settings[keyword] = {
@@ -431,7 +474,8 @@ export function parseTemplate(lines) {
             defaultInteger: '',
             category: 'マップ座標',
             type: 'MAP_POSITION',
-            options: {}
+            options: {},
+            enableExport: true
         };
         settingBoxes.push(mapPosBox);
         editedValues.settings[`${keyword}-mappos`] = {
@@ -453,7 +497,8 @@ export function parseTemplate(lines) {
             category: '方向',
             type: 'ORIENTATION',
             option: '変更しないを追加',
-            options: {}
+            options: {},
+            enableExport: true
         };
         settingBoxes.push(orientationBox);
         editedValues.settings[`${keyword}-orientation`] = {
@@ -480,7 +525,8 @@ export function parseTemplate(lines) {
             options: {
                 最大: '999999',
                 最小: '0'
-            }
+            },
+            enableExport: true
         };
         settingBoxes.push(box);
         editedValues.settings[keyword] = {
@@ -492,6 +538,32 @@ export function parseTemplate(lines) {
             type: 'VARIABLE'
         };
         logDebug(`Added variable template for keyword ${keyword} with default int: ${int}`);
+    });
+
+    switchConditionKeywords.forEach(({ desc, string }, keyword) => {
+        const box = {
+            id: keyword,
+            desc: desc,
+            defaultGuid: '',
+            defaultString: string,
+            defaultInteger: '',
+            category: 'スイッチ条件',
+            type: 'COND_TYPE_SWITCH',
+            options: {},
+            enableExport: false
+        };
+        settingBoxes.push(box);
+        editedValues.settings[keyword] = {
+            id: keyword,
+            desc: box.desc,
+            guid: '',
+            string: string,
+            int: '',
+            type: 'COND_TYPE_SWITCH',
+            originalReferenceName: originalSwitchReferences.get(keyword),
+            enableExport: false
+        };
+        logDebug(`Added switch condition template for keyword ${keyword} with reference name: ${string}`);
     });
 
     editedValues.title = title || eventName || '';

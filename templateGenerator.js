@@ -1,4 +1,4 @@
-import { originalLines, editedValues, logDebug, commandTypeMap } from './utils.js';
+import { originalLines, editedValues, logDebug, commandTypeMap, originalSwitchReferences } from './utils.js';
 
 export function generateTemplate(lines, eventName) {
     if (!eventName) {
@@ -20,6 +20,8 @@ export function generateTemplate(lines, eventName) {
     const moveKeywords = new Map();
     const variableKeywords = new Map();
     const dialogueKeywords = new Map();
+    const switchConditionKeywords = new Map();
+    const stringVariableKeywords = new Map();
     const usedGraphicKeywords = new Set();
     const sheetGraphicUpdates = new Map();
 
@@ -45,6 +47,53 @@ export function generateTemplate(lines, eventName) {
         }
         if (inSheet && line.startsWith('モーション')) {
             motion = line.replace('モーション', '').trim();
+            continue;
+        }
+        if (inSheet && line.startsWith('条件\tCOND_TYPE_SWITCH')) {
+            let referenceName = '';
+            let originalReferenceName = '';
+            for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('条件終了'); j++) {
+                const subLine = modifiedLines[j].trim();
+                if (subLine.startsWith('参照名')) {
+                    originalReferenceName = subLine.replace('参照名', '').trim();
+                    referenceName = originalReferenceName.replace(/\|文字列\|([^|]*)\|/, '$1') || `switch_${sheetName.toLowerCase().replace(/\s+/g, '_')}_${i}`;
+                    const prefix = modifiedLines[j].match(/^\t*/)[0];
+                    const keyword = referenceName;
+                    modifiedLines[j] = `${prefix}参照名\t|文字列|${keyword}|`;
+                    logDebug(`Updated COND_TYPE_SWITCH 参照名 to |文字列|${keyword}| at line ${j + 1}`);
+                    if (!switchConditionKeywords.has(keyword)) {
+                        switchConditionKeywords.set(keyword, {
+                            desc: `${sheetName} switch condition`,
+                            string: referenceName
+                        });
+                        originalSwitchReferences.set(keyword, originalReferenceName);
+                        const box = {
+                            id: keyword,
+                            desc: `${sheetName} switch condition`,
+                            defaultGuid: '',
+                            defaultString: referenceName,
+                            defaultInteger: '',
+                            category: 'スイッチ条件',
+                            type: 'COND_TYPE_SWITCH',
+                            options: {},
+                            enableExport: false
+                        };
+                        settingBoxes.push(box);
+                        editedValues.settings[keyword] = {
+                            id: keyword,
+                            desc: box.desc,
+                            guid: '',
+                            string: referenceName,
+                            int: '',
+                            type: 'COND_TYPE_SWITCH',
+                            originalReferenceName,
+                            enableExport: false
+                        };
+                        logDebug(`Added switch condition template for keyword ${keyword} with reference name: ${referenceName}, original: ${originalReferenceName}`);
+                    }
+                    break;
+                }
+            }
             continue;
         }
         if (line.startsWith('スクリプト')) {
@@ -77,7 +126,8 @@ export function generateTemplate(lines, eventName) {
                             defaultInteger: '',
                             category: 'キャラクターグラフィック',
                             type: 'GRAPHICAL',
-                            options: {}
+                            options: {},
+                            enableExport: true
                         };
                         settingBoxes.push(box);
                         editedValues.settings[keyword] = {
@@ -110,7 +160,8 @@ export function generateTemplate(lines, eventName) {
                             defaultInteger: '',
                             category: '顔グラフィック',
                             type: 'FACIAL GRAPHICS',
-                            options: {}
+                            options: {},
+                            enableExport: true
                         };
                         settingBoxes.push(box);
                         editedValues.settings[keyword] = {
@@ -149,6 +200,7 @@ export function generateTemplate(lines, eventName) {
                             isMove: false,
                             isVariable: false,
                             isDialogue: false,
+                            isStringVariable: false,
                             dialogueCharacters,
                             lineIndex: i
                         };
@@ -218,7 +270,8 @@ export function generateTemplate(lines, eventName) {
                         defaultInteger: '',
                         category: '文章',
                         type: 'MESSAGE',
-                        options: {}
+                        options: {},
+                        enableExport: true
                     };
                     settingBoxes.push(box);
                     editedValues.settings[lastComment.id] = {
@@ -260,7 +313,8 @@ export function generateTemplate(lines, eventName) {
                         defaultInteger: '',
                         category: '文章',
                         type: 'MESSAGE',
-                        options: {}
+                        options: {},
+                        enableExport: true
                     };
                     settingBoxes.push(box);
                     editedValues.settings[lastComment.id] = {
@@ -272,6 +326,49 @@ export function generateTemplate(lines, eventName) {
                         type: 'MESSAGE'
                     };
                     logDebug(`Added message template for keyword ${lastComment.id} with text: ${messageText}`);
+                }
+                lastComment = null;
+                continue;
+            }
+            if (line.startsWith('コマンド\tSTRING_VARIABLE')) {
+                logDebug(`Detected STRING_VARIABLE after #${lastComment.id} at line ${i + 1}`);
+                lastComment.isStringVariable = true;
+                if (!stringVariableKeywords.has(lastComment.id)) {
+                    let stringText = '';
+                    for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
+                        if (modifiedLines[j].trim().startsWith('文字列')) {
+                            stringText = modifiedLines[j].replace('文字列', '').trim();
+                            const prefix = modifiedLines[j].match(/^\t*/)[0];
+                            modifiedLines[j] = `${prefix}文字列\t|文字列|${lastComment.id}|`;
+                            logDebug(`Updated STRING_VARIABLE 文字列 to |文字列|${lastComment.id}| at line ${j + 1}`);
+                            break;
+                        }
+                    }
+                    stringVariableKeywords.set(lastComment.id, {
+                        desc: `${lastComment.id} string variable`,
+                        string: stringText
+                    });
+                    const box = {
+                        id: lastComment.id,
+                        desc: `${lastComment.id} string variable`,
+                        defaultGuid: '',
+                        defaultString: stringText,
+                        defaultInteger: '',
+                        category: '文章',
+                        type: 'STRING_VARIABLE',
+                        options: {},
+                        enableExport: true
+                    };
+                    settingBoxes.push(box);
+                    editedValues.settings[lastComment.id] = {
+                        id: lastComment.id,
+                        desc: box.desc,
+                        guid: '',
+                        string: stringText,
+                        int: '',
+                        type: 'STRING_VARIABLE'
+                    };
+                    logDebug(`Added string variable template for keyword ${lastComment.id} with text: ${stringText}`);
                 }
                 lastComment = null;
                 continue;
@@ -315,7 +412,8 @@ export function generateTemplate(lines, eventName) {
                         defaultInteger: '',
                         category: 'モンスター',
                         type: 'MONSTER',
-                        options: {}
+                        options: {},
+                        enableExport: true
                     };
                     const backgroundBox = {
                         id: `${lastComment.id}-battlemap`,
@@ -325,7 +423,8 @@ export function generateTemplate(lines, eventName) {
                         defaultInteger: '',
                         category: 'バトル背景',
                         type: 'BATTLE BACKGROUND',
-                        options: {}
+                        options: {},
+                        enableExport: true
                     };
                     settingBoxes.push(monsterBox, backgroundBox);
                     editedValues.settings[`${lastComment.id}-monster`] = {
@@ -379,7 +478,8 @@ export function generateTemplate(lines, eventName) {
                         defaultInteger: '',
                         category: 'キャラクターグラフィック',
                         type: 'GRAPHICAL',
-                        options: {}
+                        options: {},
+                        enableExport: true
                     };
                     settingBoxes.push(box);
                     editedValues.settings[lastComment.id] = {
@@ -429,7 +529,8 @@ export function generateTemplate(lines, eventName) {
                         options: {
                             最大: '999999',
                             最小: '0'
-                        }
+                        },
+                        enableExport: true
                     };
                     settingBoxes.push(box);
                     editedValues.settings[lastComment.id] = {
@@ -461,7 +562,8 @@ export function generateTemplate(lines, eventName) {
                         defaultInteger: '',
                         category: 'アイテム',
                         type: 'ITEM',
-                        options: {}
+                        options: {},
+                        enableExport: true
                     };
                     settingBoxes.push(box);
                     editedValues.settings[lastComment.id] = {
@@ -500,7 +602,8 @@ export function generateTemplate(lines, eventName) {
                         defaultInteger: '',
                         category: 'スイッチ',
                         type: 'SWITCH',
-                        options: {}
+                        options: {},
+                        enableExport: true
                     };
                     settingBoxes.push(box);
                     editedValues.settings[lastComment.id] = {
@@ -557,7 +660,8 @@ export function generateTemplate(lines, eventName) {
                         defaultInteger: '',
                         category: 'マップ座標',
                         type: 'MAP_POSITION',
-                        options: {}
+                        options: {},
+                        enableExport: true
                     };
                     settingBoxes.push(mapPosBox);
                     editedValues.settings[`${lastComment.id}-mappos`] = {
@@ -578,7 +682,8 @@ export function generateTemplate(lines, eventName) {
                         category: '方向',
                         type: 'ORIENTATION',
                         option: '変更しないを追加',
-                        options: {}
+                        options: {},
+                        enableExport: true
                     };
                     settingBoxes.push(orientationBox);
                     editedValues.settings[`${lastComment.id}-orientation`] = {
@@ -667,6 +772,13 @@ export function generateTemplate(lines, eventName) {
             `\t\tデフォルト文字列\t${string}`,
             `\t設定ボックス終了`
         ].join('\n')) : []),
+        ...(stringVariableKeywords.size ? Array.from(stringVariableKeywords.entries()).map(([keyword, { desc, string }]) => [
+            `\t設定ボックス\t文章`,
+            `\t\t設定ID\t${keyword}`,
+            `\t\t説明\t${desc}`,
+            `\t\tデフォルト文字列\t${string}`,
+            `\t設定ボックス終了`
+        ].join('\n')) : []),
         ...(monsterKeywords.size ? Array.from(monsterKeywords.entries()).map(([keyword, { desc, guid }]) => [
             `\t設定ボックス\tモンスター`,
             `\t\t設定ID\t${keyword}`,
@@ -700,6 +812,13 @@ export function generateTemplate(lines, eventName) {
             `\t\tデフォルト整数\t${int}`,
             `\t\tオプション\t最大\t999999`,
             `\t\tオプション\t最小\t0`,
+            `\t設定ボックス終了`
+        ].join('\n')) : []),
+        ...(switchConditionKeywords.size ? Array.from(switchConditionKeywords.entries()).map(([keyword, { desc, string }]) => [
+            `\t設定ボックス\tスイッチ条件`,
+            `\t\t設定ID\t${keyword}`,
+            `\t\t説明\t${desc}`,
+            `\t\tデフォルト文字列\t${string}`,
             `\t設定ボックス終了`
         ].join('\n')) : []),
         `テンプレート定義終了`

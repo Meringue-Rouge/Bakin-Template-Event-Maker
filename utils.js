@@ -1,6 +1,7 @@
 // Global storage
 let originalLines = [];
 let editedValues = { title: '', description: '', settings: {} };
+let originalSwitchReferences = new Map(); // Store original reference names for COND_TYPE_SWITCH
 
 // Debug logging
 const logDebug = message => {
@@ -14,7 +15,7 @@ const updateField = (path, value) => {
     for (let i = 0; i < keys.length - 1; i++) {
         obj = obj[keys[i]] = obj[keys[i]] || {};
     }
-    obj[keys[keys.length - 1]] = value.trim();
+    obj[keys[keys.length - 1]] = value;
     logDebug(`Updated ${path}: ${value}`);
 };
 
@@ -31,7 +32,8 @@ const typeMap = {
     'スイッチ': 'SWITCH',
     'マップ座標': 'MAP_POSITION',
     '方向': 'ORIENTATION',
-    '変数': 'VARIABLE'
+    '変数': 'VARIABLE',
+    'スイッチ条件': 'COND_TYPE_SWITCH'
 };
 
 // Command to template type mapping
@@ -45,8 +47,9 @@ const commandTypeMap = {
     'MOVE': 'MAP_POSITION',
     'PLMOVE': 'MAP_POSITION',
     'VARIABLE': 'VARIABLE',
-    'MESSAGE': 'MESSAGE'
+    'MESSAGE': 'MESSAGE',
+    'COND_TYPE_SWITCH': 'COND_TYPE_SWITCH'
 };
 
 // Export utilities
-export { originalLines, editedValues, logDebug, updateField, typeMap, commandTypeMap };
+export { originalLines, editedValues, originalSwitchReferences, logDebug, updateField, typeMap, commandTypeMap };

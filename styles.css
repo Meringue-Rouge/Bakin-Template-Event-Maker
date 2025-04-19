@@ -65,6 +65,12 @@ textarea {
     resize: vertical;
 }
 
+/* Checkbox */
+input[type="checkbox"] {
+    margin-top: 1rem;
+    margin-right: 0.5rem;
+}
+
 /* File input */
 input[type="file"] {
     margin: 1.5rem 0;
@@ -134,6 +140,16 @@ button:active {
 
 .setting-box:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* COND_TYPE_SWITCH specific styling */
+.setting-box.switch-condition {
+    background-color: #f0fdf4;
+    border-left: 4px solid #22c55e;
+}
+
+.setting-box.switch-condition h2 {
+    color: #15803d;
 }
 
 /* Debug section */

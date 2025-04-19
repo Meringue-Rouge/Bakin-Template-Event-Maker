@@ -10,13 +10,20 @@ export function displayTemplate({ title, description, settingBoxes }) {
     `;
 
     settingBoxes.forEach(box => {
+        const isSwitchCondition = box.type === 'COND_TYPE_SWITCH';
         html += `
-            <div class="setting-box">
+            <div class="setting-box${isSwitchCondition ? ' switch-condition' : ''}">
                 <h2>[${box.type}]</h2>
                 <label for="id-input-${box.id}">Setting ID:</label>
                 <input type="text" id="id-input-${box.id}" value="${box.id}">
                 <label for="desc-input-${box.id}">Setting Description:</label>
                 <textarea id="desc-input-${box.id}">${box.desc || ''}</textarea>
+                ${isSwitchCondition ? `
+                    <label>
+                        <input type="checkbox" id="enable-export-${box.id}" ${box.enableExport ? 'checked' : ''}>
+                        Enable Export
+                    </label>
+                ` : ''}
                 ${renderInput(box.type, box)}
             </div>
         `;
@@ -42,6 +49,17 @@ export function displayTemplate({ title, description, settingBoxes }) {
             updateField(`settings.${box.id}.desc`, e.target.value);
         });
 
+        // Attach listener for enable export checkbox
+        if (box.type === 'COND_TYPE_SWITCH') {
+            const enableExportInput = document.getElementById(`enable-export-${box.id}`);
+            if (enableExportInput) {
+                enableExportInput.addEventListener('change', (e) => {
+                    updateField(`settings.${box.id}.enableExport`, e.target.checked);
+                    logDebug(`Updated enableExport for ${box.id}: ${e.target.checked}`);
+                });
+            }
+        }
+
         // Attach listeners for specific input fields based on type
         if (['GRAPHICAL', 'FACIAL GRAPHICS', 'MONSTER', 'BATTLE BACKGROUND'].includes(box.type)) {
             const guidInput = document.getElementById(`guid-input-${box.id}`);
@@ -59,7 +77,7 @@ export function displayTemplate({ title, description, settingBoxes }) {
                 });
             }
         }
-        if (box.type === 'MESSAGE' || box.type === 'SWITCH') {
+        if (box.type === 'MESSAGE' || box.type === 'SWITCH' || box.type === 'COND_TYPE_SWITCH') {
             const stringInput = document.getElementById(`string-input-${box.id}`);
             if (stringInput) {
                 stringInput.addEventListener('input', (e) => {
@@ -117,6 +135,12 @@ function renderInput(type, box) {
         html += `
             <label for="string-input-${box.id}">${type === 'SWITCH' ? 'Switch Name' : 'Message Text'}:</label>
             <textarea id="string-input-${box.id}">${box.defaultString || ''}</textarea>
+        `;
+    }
+    if (type === 'COND_TYPE_SWITCH') {
+        html += `
+            <label for="string-input-${box.id}">Switch Reference Name:</label>
+            <input type="text" id="string-input-${box.id}" value="${box.defaultString || ''}">
         `;
     }
     if (type === 'VARIABLE') {
