@@ -184,3 +184,31 @@ More events will be supported as I get to working on this tool.
 - Make sure to add a bmp file with the exact same name as your txt file. Make a duplicate of one of the defaults in the same folder and rename it if you don't have one.
 - Close Bakin entirely and then open a game project.
 - For common events, it'll appear at the bottom when creating a standard common event. For a map event, it'll show up in a Event folder in the Events tab of placable entities.
+
+# Manual Enhancements / Research:
+Unfortunately, I won't be able to support every event or element automatically, since I'm working on this tool while working on my game. However, there are a few additional things you could look into and edit the output from the editor manually to greatly improve your template events.
+
+First, it's worth checking out the official templates' TXT files, and seeing how they're formatted. This is how I was able to use AI (Grok 3 in this case) to build out the website to automate the process in building one's own template events.
+
+## Categories
+Each template event can have at the start of the TXT, before everything else, two lines that "categorize" the event.
+`スタンプ	Stamp
+カテゴリ	Category`
+I'm not sure what the Stamp label does in the engine, however, the Category will define which folder the template will appear in. For example, if I write `カテゴリ	Hard Magic`, then the template event will be in a folder called "Hard Magic".
+
+## UI Order
+`テンプレート定義	Title
+	設定ボックス	説明文
+		デフォルト文字列	Description
+		設定ID	説明
+	設定ボックス終了	改行
+	設定ボックス	キャラクターグラフィック
+		...
+	設定ボックス終了
+	設定ボックス	文章
+		...
+	設定ボックス終了
+テンプレート定義終了`
+At the top of a template file, the contents of the template are defined by `テンプレート定義` and end at `テンプレート定義終了`.
+Each object on the UI are declared by `設定ボックス`, followed by the type of UI element it is in japanese, and end by `設定ボックス終了`.
+You can reorder the order of these objects and everything inside to re-order the UI order, useful to keep elements related to the same thing closer together.
