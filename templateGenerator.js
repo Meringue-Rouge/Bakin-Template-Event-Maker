@@ -22,6 +22,7 @@ export function generateTemplate(lines, eventName) {
     const dialogueKeywords = new Map();
     const switchConditionKeywords = new Map();
     const stringVariableKeywords = new Map();
+    const characterKeywords = new Map();
     const usedGraphicKeywords = new Set();
     const sheetGraphicUpdates = new Map();
 
@@ -174,8 +175,9 @@ export function generateTemplate(lines, eventName) {
                         };
                         logDebug(`Added character graphic template for C#${keyword} with GUID ${graphicGuid || 'none'} and motion ${motion || 'none'}`);
                     }
-                } else if (comment.startsWith('#') || comment.startsWith('M#')) {
-                    const keyword = comment.startsWith('M#') ? comment.slice(2).split(/\s+/)[0] : comment.slice(1).split(/\s+/)[0];
+                } else if (comment.startsWith('#') || comment.startsWith('2#') || comment.startsWith('M#')) {
+                    const isMonster = comment.startsWith('2#');
+                    const keyword = isMonster ? comment.slice(2).split(/\s+/)[0] : (comment.startsWith('M#') ? comment.slice(2).split(/\s+/)[0] : comment.slice(1).split(/\s+/)[0]);
                     let dialogueCharacters = { leftSpeaker: null, rightSpeaker: null, eventL: null, eventR: null };
                     if (comment.includes('[') && comment.includes(']')) {
                         const bracketContent = comment.match(/\[([^\]]*)\]/)?.[1] || '';
@@ -188,7 +190,7 @@ export function generateTemplate(lines, eventName) {
                         }
                     }
                     if (keyword) {
-                        logDebug(`Found ${comment.startsWith('M#') ? 'M#' : '#'} ${keyword} at line ${i + 1}`);
+                        logDebug(`Found ${isMonster ? '2#' : comment.startsWith('M#') ? 'M#' : '#'} ${keyword} at line ${i + 1}`);
                         lastComment = {
                             id: keyword,
                             isGraphic: comment.startsWith('G#'),
@@ -201,6 +203,8 @@ export function generateTemplate(lines, eventName) {
                             isVariable: false,
                             isDialogue: false,
                             isStringVariable: false,
+                            isCharacter: !isMonster && !comment.startsWith('M#'),
+                            isMonster: isMonster || comment.startsWith('M#'),
                             dialogueCharacters,
                             lineIndex: i
                         };
@@ -700,6 +704,84 @@ export function generateTemplate(lines, eventName) {
                 lastComment = null;
                 continue;
             }
+            if (line.startsWith('コマンド\tCOL_CONTACT')) {
+                logDebug(`Detected COL_CONTACT after ${lastComment.isMonster ? '2#' : '#'} ${lastComment.id} at line ${i + 1}`);
+                if (lastComment.isCharacter && !characterKeywords.has(lastComment.id)) {
+                    let guid = '';
+                    for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
+                        if (modifiedLines[j].trim().startsWith('Guid')) {
+                            guid = modifiedLines[j].replace('Guid', '').trim();
+                            const prefix = modifiedLines[j].match(/^\t*/)[0];
+                            modifiedLines[j] = `${prefix}Guid\t|Guid|${lastComment.id}|`;
+                            logDebug(`Updated COL_CONTACT Guid to |Guid|${lastComment.id}| at line ${j + 1}`);
+                            break;
+                        }
+                    }
+                    characterKeywords.set(lastComment.id, {
+                        desc: `${lastComment.id} character`,
+                        guid: guid
+                    });
+                    const box = {
+                        id: lastComment.id,
+                        desc: `${lastComment.id} character`,
+                        defaultGuid: guid,
+                        defaultString: '',
+                        defaultInteger: '',
+                        category: 'キャラクター',
+                        type: 'CHARACTER',
+                        options: {},
+                        enableExport: true
+                    };
+                    settingBoxes.push(box);
+                    editedValues.settings[lastComment.id] = {
+                        id: lastComment.id,
+                        desc: box.desc,
+                        guid: guid,
+                        string: '',
+                        int: '',
+                        type: 'CHARACTER'
+                    };
+                    logDebug(`Added character template for keyword ${lastComment.id} with GUID ${guid}`);
+                } else if (lastComment.isMonster && !monsterKeywords.has(lastComment.id)) {
+                    let guid = '';
+                    for (let j = i + 1; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
+                        if (modifiedLines[j].trim().startsWith('Guid')) {
+                            guid = modifiedLines[j].replace('Guid', '').trim();
+                            const prefix = modifiedLines[j].match(/^\t*/)[0];
+                            modifiedLines[j] = `${prefix}Guid\t|Guid|${lastComment.id}|`;
+                            logDebug(`Updated COL_CONTACT Guid to |Guid|${lastComment.id}| at line ${j + 1}`);
+                            break;
+                        }
+                    }
+                    monsterKeywords.set(lastComment.id, {
+                        desc: `${lastComment.id} monster`,
+                        guid: guid
+                    });
+                    const box = {
+                        id: lastComment.id,
+                        desc: `${lastComment.id} monster`,
+                        defaultGuid: guid,
+                        defaultString: '',
+                        defaultInteger: '',
+                        category: 'モンスター',
+                        type: 'MONSTER',
+                        options: {},
+                        enableExport: true
+                    };
+                    settingBoxes.push(box);
+                    editedValues.settings[lastComment.id] = {
+                        id: lastComment.id,
+                        desc: box.desc,
+                        guid: guid,
+                        string: '',
+                        int: '',
+                        type: 'MONSTER'
+                    };
+                    logDebug(`Added monster template for keyword ${lastComment.id} with GUID ${guid}`);
+                }
+                lastComment = null;
+                continue;
+            }
             if (lastComment.isGraphic) {
                 const commandLine = line.split(/\s+/).filter(part => part);
                 const commandType = commandLine[1] || '';
@@ -820,6 +902,14 @@ export function generateTemplate(lines, eventName) {
             `\t\t説明\t${desc}`,
             `\t\tデフォルト文字列\t${string}`,
             `\t設定ボックス終了`
+        ].join('\n')) : []),
+        ...(characterKeywords.size ? Array.from(characterKeywords.entries()).map(([keyword, { desc, guid }]) => [
+            `\t設定ボックス\tキャラクター`,
+            `\t\t設定ID\t${keyword}`,
+            `\t\t説明\t${desc}`,
+            `\t\tデフォルトGuid\t${guid}`,
+            `\t設定ボックス終了`,
+            `\t改行`
         ].join('\n')) : []),
         `テンプレート定義終了`
     ].flat();

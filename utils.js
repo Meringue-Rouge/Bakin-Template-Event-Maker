@@ -33,7 +33,8 @@ const typeMap = {
     'マップ座標': 'MAP_POSITION',
     '方向': 'ORIENTATION',
     '変数': 'VARIABLE',
-    'スイッチ条件': 'COND_TYPE_SWITCH'
+    'スイッチ条件': 'COND_TYPE_SWITCH',
+    'キャラクター': 'CHARACTER'
 };
 
 // Command to template type mapping
@@ -48,7 +49,8 @@ const commandTypeMap = {
     'PLMOVE': 'MAP_POSITION',
     'VARIABLE': 'VARIABLE',
     'MESSAGE': 'MESSAGE',
-    'COND_TYPE_SWITCH': 'COND_TYPE_SWITCH'
+    'COND_TYPE_SWITCH': 'COND_TYPE_SWITCH',
+    'COL_CONTACT': 'CHARACTER' // Maps to CHARACTER or MONSTER based on keyword prefix
 };
 
 // Export utilities

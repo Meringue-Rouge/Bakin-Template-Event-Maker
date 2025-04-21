@@ -14,6 +14,7 @@ export function parseTemplate(lines) {
     const moveKeywords = new Map();
     const variableKeywords = new Map();
     const switchConditionKeywords = new Map();
+    const characterKeywords = new Map(); // For #keyword in COL_CONTACT
     const usedGraphicKeywords = new Set();
 
     for (let i = 0; i < lines.length; i++) {
@@ -91,8 +92,9 @@ export function parseTemplate(lines) {
                         });
                         logDebug(`Found C#${keyword} in sheet ${sheetName || 'Event'} with GUID ${graphicGuid || 'none'} and motion ${motion || 'none'}`);
                     }
-                } else if (comment.startsWith('#') || comment.startsWith('M#')) {
-                    const keyword = comment.startsWith('M#') ? comment.slice(2).split(/\s+/)[0] : comment.slice(1).split(/\s+/)[0];
+                } else if (comment.startsWith('#') || comment.startsWith('2#') || comment.startsWith('M#')) {
+                    const isMonster = comment.startsWith('2#');
+                    const keyword = isMonster ? comment.slice(2).split(/\s+/)[0] : (comment.startsWith('M#') ? comment.slice(2).split(/\s+/)[0] : comment.slice(1).split(/\s+/)[0]);
                     let dialogueCharacters = { leftSpeaker: null, rightSpeaker: null, eventL: null, eventR: null };
                     if (comment.includes('[') && comment.includes(']')) {
                         const bracketContent = comment.match(/\[([^\]]*)\]/)?.[1] || '';
@@ -198,6 +200,28 @@ export function parseTemplate(lines) {
                                         break;
                                     }
                                 }
+                            }
+                        } else if (i + 2 < lines.length && lines[i + 2].trim().startsWith('コマンド\tCOL_CONTACT')) {
+                            let guid = '';
+                            for (let j = i + 3; j < lines.length && !lines[j].trim().startsWith('コマンド終了'); j++) {
+                                const subLine = lines[j].trim();
+                                if (subLine.startsWith('Guid')) {
+                                    guid = subLine.replace('Guid', '').trim();
+                                    break;
+                                }
+                            }
+                            if (isMonster) {
+                                monsterKeywords.set(keyword, {
+                                    desc: `${keyword} monster`,
+                                    guid: guid
+                                });
+                                logDebug(`Found 2#${keyword} for COL_CONTACT in sheet ${sheetName} with monster GUID ${guid}`);
+                            } else {
+                                characterKeywords.set(keyword, {
+                                    desc: `${keyword} character`,
+                                    guid: guid
+                                });
+                                logDebug(`Found #${keyword} for COL_CONTACT in sheet ${sheetName} with character GUID ${guid}`);
                             }
                         } else if (i + 3 < lines.length && lines[i + 2].trim().startsWith('コマンド\tIFITEM')) {
                             itemKeywords.set(keyword, {
@@ -564,6 +588,30 @@ export function parseTemplate(lines) {
             enableExport: false
         };
         logDebug(`Added switch condition template for keyword ${keyword} with reference name: ${string}`);
+    });
+
+    characterKeywords.forEach(({ desc, guid }, keyword) => {
+        const box = {
+            id: keyword,
+            desc: desc,
+            defaultGuid: guid,
+            defaultString: '',
+            defaultInteger: '',
+            category: 'キャラクター',
+            type: 'CHARACTER',
+            options: {},
+            enableExport: true
+        };
+        settingBoxes.push(box);
+        editedValues.settings[keyword] = {
+            id: keyword,
+            desc: box.desc,
+            guid: guid,
+            string: '',
+            int: '',
+            type: 'CHARACTER'
+        };
+        logDebug(`Added character template for keyword ${keyword} with GUID ${guid}`);
     });
 
     editedValues.title = title || eventName || '';

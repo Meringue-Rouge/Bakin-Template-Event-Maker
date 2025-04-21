@@ -48,6 +48,7 @@ function exportFile() {
     try {
         let modifiedLines = [...originalLines];
         let inSheet = false; // Declare inSheet at the correct scope
+        let inScript = false;
 
         // Generate updated template section
         const newTemplateLines = [
@@ -198,6 +199,15 @@ function exportFile() {
                     `\t\tデフォルト文字列\t${settings.string || ''}`,
                     `\t設定ボックス終了`
                 );
+            } else if (settings.type === 'CHARACTER') {
+                newTemplateLines.push(
+                    `\t設定ボックス\tキャラクター`,
+                    `\t\t設定ID\t${settingId}`,
+                    `\t\t説明\t${settings.desc || `${settingId} character`}`,
+                    `\t\tデフォルトGuid\t${settings.guid || ''}`,
+                    `\t設定ボックス終了`,
+                    `\t改行`
+                );
             }
         });
 
@@ -264,9 +274,7 @@ function exportFile() {
             logDebug(`Inserted default イベント名 at line ${insertIndex + newTemplateLines.length + 2}`);
         }
 
-        // Update GRAPHIC, VARIABLE, MESSAGE, BOSSBATTLE, and COND_TYPE_SWITCH commands with new values
-        let inScript = false;
-        inSheet = false; // Reset inSheet
+        // Update GRAPHIC, VARIABLE, MESSAGE, BOSSBATTLE, COL_CONTACT, and COND_TYPE_SWITCH commands with new values
         Object.entries(editedValues.settings).forEach(([keyword, settings]) => {
             const settingId = idMapping[keyword] || keyword; // Use new ID if available
             if (settings.type === 'GRAPHICAL') {
@@ -410,6 +418,34 @@ function exportFile() {
                                             modifiedLines[j] = `${prefix}Guid\t|Guid|${settingId}|`;
                                             logDebug(`Updated BOSSBATTLE background Guid for ${keyword} to ${settingId} at line ${j + 1}`);
                                         }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (settings.type === 'CHARACTER' || (settings.type === 'MONSTER' && !keyword.includes('-monster'))) {
+                for (let i = 0; i < modifiedLines.length; i++) {
+                    const line = modifiedLines[i].trim();
+                    if (line.startsWith('スクリプト')) {
+                        inScript = true;
+                        continue;
+                    }
+                    if (line.startsWith('スクリプト終了')) {
+                        inScript = false;
+                        continue;
+                    }
+                    if (inScript && line.startsWith('コマンド\tCOMMENT')) {
+                        if (i + 1 < modifiedLines.length && modifiedLines[i + 1].trim().startsWith('文字列')) {
+                            const comment = modifiedLines[i + 1].replace('文字列', '').trim();
+                            const expectedComment = settings.type === 'CHARACTER' ? `#${keyword}` : `2#${keyword}`;
+                            if (comment === expectedComment && i + 2 < modifiedLines.length && modifiedLines[i + 2].trim().startsWith('コマンド\tCOL_CONTACT')) {
+                                for (let j = i + 3; j < modifiedLines.length && !modifiedLines[j].trim().startsWith('コマンド終了'); j++) {
+                                    if (modifiedLines[j].trim().startsWith('Guid')) {
+                                        const prefix = modifiedLines[j].match(/^\t*/)[0];
+                                        modifiedLines[j] = `${prefix}Guid\t|Guid|${settingId}|`;
+                                        logDebug(`Updated COL_CONTACT Guid for ${keyword} to ${settingId} at line ${j + 1}`);
+                                        break;
                                     }
                                 }
                             }
