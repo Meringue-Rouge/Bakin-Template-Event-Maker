@@ -62,6 +62,7 @@ Using the **exact same keyword multiple times** throughout an event and it's she
 
 ## Variable Box
 - [X] **Variable Box Assignment and Calculation / 変数ボックスへの代入と計算**
+- [X] **Assign to String Variable / 文字列変数への代入**
 
 ![Capture d'écran 2025-04-15 105117-small](https://github.com/user-attachments/assets/647c686e-14f1-47f3-855e-c9e99e0c5b58)
 
@@ -146,6 +147,20 @@ The initial #keyword for the event will dictate the dialogue's word contents, so
 
 > ***Only one G#keyword per eventsheet allowed. You can reuse the same G#keyword on different sheets if you want different sheets to share the same changable model.***
 
+## EventSheet Conditions
+
+- [X] **Switch**
+
+![Capture d'écran 2025-04-19 192239-small](https://github.com/user-attachments/assets/ff962aad-d98f-4972-92f1-156885815736)
+![Capture d'écran 2025-04-19 192221-small](https://github.com/user-attachments/assets/fe5e9b71-145d-450e-8896-d6def06f4a63)
+
+You can make the switches contained within an eventsheet's run conditions.
+Since there's no way to leave comments inside of eventsheet conditions, by default, ALL eventsheet switches are displayed on the website, and if you don't turn on the "Enable Export" button on them, they will not be turned into parameters when exported. Eventsheets conditions referring to the same switch will be merged into one template object on the website and bakin.
+
+> [!IMPORTANT]
+> For the website to distinguish the different switches, unlike standard events in your sheet, in which the #keyword would handle the process (thus making whatever switch you used not important), here you NEED to make sure the switches are different according to your logic (in other words, you can't use one switch for every eventsheet switch condition and replace each one individually on the website).
+
+
 
 More events will be supported as I get to working on this tool.
 
@@ -169,3 +184,31 @@ More events will be supported as I get to working on this tool.
 - Make sure to add a bmp file with the exact same name as your txt file. Make a duplicate of one of the defaults in the same folder and rename it if you don't have one.
 - Close Bakin entirely and then open a game project.
 - For common events, it'll appear at the bottom when creating a standard common event. For a map event, it'll show up in a Event folder in the Events tab of placable entities.
+
+# Manual Enhancements / Research:
+Unfortunately, I won't be able to support every event or element automatically, since I'm working on this tool while working on my game. However, there are a few additional things you could look into and edit the output from the editor manually to greatly improve your template events.
+
+First, it's worth checking out the official templates' TXT files, and seeing how they're formatted. This is how I was able to use AI (Grok 3 in this case) to build out the website to automate the process in building one's own template events.
+
+## Categories
+Each template event can have at the start of the TXT, before everything else, two lines that "categorize" the event.
+`スタンプ	Stamp
+カテゴリ	Category`
+I'm not sure what the Stamp label does in the engine, however, the Category will define which folder the template will appear in. For example, if I write `カテゴリ	Hard Magic`, then the template event will be in a folder called "Hard Magic".
+
+## UI Order
+`テンプレート定義	Title
+	設定ボックス	説明文
+		デフォルト文字列	Description
+		設定ID	説明
+	設定ボックス終了	改行
+	設定ボックス	キャラクターグラフィック
+		...
+	設定ボックス終了
+	設定ボックス	文章
+		...
+	設定ボックス終了
+テンプレート定義終了`
+At the top of a template file, the contents of the template are defined by `テンプレート定義` and end at `テンプレート定義終了`.
+Each object on the UI are declared by `設定ボックス`, followed by the type of UI element it is in japanese, and end by `設定ボックス終了`.
+You can reorder the order of these objects and everything inside to re-order the UI order, useful to keep elements related to the same thing closer together.
