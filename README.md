@@ -6,7 +6,7 @@ https://meringue-rouge.github.io/Bakin-Template-Event-Maker/<br><br>
 **Generate custom template events for RPG Developer Bakin using this website and simple Note events in your event export!**
 
 > [!WARNING]
-> Website is in BETA, a lot of features aren't supported. If you encounter bugs, please submit an issue here, or contact me on X ([@ingenoireP](https://x.com/IngenoireP)). Thanks, and hopefully this tool helps you out!
+> Website is in BETA, a lot of features aren't supported. If you encounter bugs, please submit an issue here, or contact me on X ([@MeringueRouge](https://x.com/MeringueRouge)). Thanks, and hopefully this tool helps you out!
 
 # What are Template Events?
 Template events are the prebuilt events that ship with Bakin, with quick generation for common RPG objects like doors and switches, with all the event logic made and ready to go, but it offers the user the ability to swap key aspects of the event, essentially through parameters.
