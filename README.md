@@ -3,25 +3,43 @@
 https://meringue-rouge.github.io/Bakin-Template-Event-Maker/<br><br>
 </h1>
 
-**Generate custom template events for RPG Developer Bakin using this website and simple Note events in your event export!**
+**Make reusable objects with map-specific parameters in RPG Developer Bakin! Generate custom template events using this website by simply adding commentary events in your event export!**
+
+**RPG Developer Bakinでマップ固有のパラメーターを持つ再利用可能なオブジェクトを作成します！イベント・エクスポートに解説イベントを追加するだけで、このウェブサイトを使用してカスタム・テンプレート・イベントを生成できます！。**
 
 > [!WARNING]
 > Website is in BETA, a lot of features aren't supported. If you encounter bugs, please submit an issue here, or contact me on X ([@MeringueRouge](https://x.com/MeringueRouge)). Thanks, and hopefully this tool helps you out!
 
-# What are Template Events?
-Template events are the prebuilt events that ship with Bakin, with quick generation for common RPG objects like doors and switches, with all the event logic made and ready to go, but it offers the user the ability to swap key aspects of the event, essentially through parameters.
+# What are Template Events useful for? |  テンプレート・イベントは何に役立つのか？
+They're useful for creating events that need to be as reusable as a Cast object, but you need to pass on very specific parameters to each instance of the object. Without it, copying and pasting an event by hand is tedious, requires modifying multiple instances of a variable, and if you need to a fix a bug in the logic, then it'll mean that modifying one means you need to edit each and every one of them.
 
-This website lets you convert, after adding a few **Note / 注釈 events**, *any event you have into a template event*. If you wanted to create a very specific and complicated entity, but dreaded having to adjust parameters, either by using the Cast system and throw some weird workarounds through global variable reading, or by copying and pasting an entity and having to meticuously edit each and every mention of one parameter (some parameters like an item can't be set to a variable), then this is the tool for you.
+Castオブジェクトのように再利用可能である必要があるイベントを作成するのに便利ですが、オブジェクトの各インスタンスに非常に特定のパラメータを渡す必要があります。また、ロジックのバグを修正する必要がある場合、1つを修正することは、1つ1つを編集することを意味します。
 
-Advantages when using Template Events:
-- Ease of use once parametered to quickly create duplicates of a complicated event with parameters changed through a light-weight and easy to use UI of your own making.
-- ~~Placed template events can be (manually) auto-updated with updates if you double-click on a placed one and confirm.~~
-  - Update: Upon closing and re-opening Bakin, existing template events revert into normal events. My bad.
-  - The tedious part is that you have to double-click previously placed ones, but it's arguably better than without it. Less better than the Cast system which auto-updates placed entities without any action on your part, assuming you are willing to deal with the limitations of that system regarding certain types of entities.
-- Re-editing a placed template event is easy.
+Some kinds of use cases that work well include treasure chests, doors, and anything really that requires passing parameters on a map basis.
 
-> [!CAUTION]
-> Template Events weren't designed for the average user to build, and thus, bad event and note configurations, or website bugs, can lead to invalid or crash-inducing template events. Under any circumstances, **DO NOT SAVE A PROJECT WITH A CORRUPTED TEMPLATE EVENT PLACED ON THE MAP**. It's probably fine (but I'm warning you, trying to delete said entity can be buggy or maybe even impossible), but just saying in case some horrible corruption can happen. Always use version control software for your projects to revert to a previous version in case something goes horribly wrong, and make sure to save before placing a newly edited template event to avoid losing progress. By using the software, you acknowledge that you won't any contributor working on this tool for damages.
+宝箱やドアなど、マップ単位でパラメータを渡す必要があるものであれば、どんなものでもよい。
+
+# How to use the website / ウェブサイトの利用方法
+
+- For most cases, add a Note (a comment) event just above the event you want to use as a parameter in your event template. The format is generally `#keyword`, and using the same keyword multiple times in the same object will only create a single field in the event template.
+- Export the object events into a TXT, by clicking the button in the top-right.
+- Load the TXT into the web tool.
+- All detected keywords are shown. Edit the descriptions if needed to make it more readable, leave information for your level designers on functionality, etc.
+- Before exporting, edit the export number and name, and then press export.
+- Drop the downloaded file in `Program Files (x86)\Steam\steamapps\common\BAKIN\data\en\templates`. You can also make it a common event template by dropping it into `Program Files (x86)\Steam\steamapps\common\BAKIN\data\en\common_templates`.
+- Duplicate any BMP image in the folder and rename it to the exact same name as your exported file (just as a BMP file instead). Feel free to edit it in an image editing software if needed.
+- Launch Bakin, and then find a "Event" folder under the event palette.
+- Place on map, fill in some properties to your liking. Double-check the template is working properly by editing it again (click on the object placed on the map twice), and convert it into a custom event, and check that the values you set were properly updated.
+
+- ほとんどの場合、イベントテンプレートのパラメータとして使用したいイベントのすぐ上に Note（コメント）イベントを追加します。書式は一般的に`#keyword`で、同じオブジェクトの中で同じキーワードを複数回使用しても、イベントテンプレートのフィールドは1つしか作成されません。
+- 右上のボタンをクリックして、オブジェクトイベントをTXTにエクスポートします。
+- TXTをウェブツールにロードします。
+- 検出されたキーワードがすべて表示されます。必要であれば、説明を編集して、より読みやすくしたり、レベル・デザイナーのために機能に関する情報を残したりしてください。
+- エクスポートする前に、エクスポート番号と名前を編集し、エクスポートを押してください。
+- ダウンロードしたファイルを「Program Files (x86)」にドロップする。また、ダウンロードしたファイルを「Program Files (x86)◆Steamsteamapps◆common◆BAKIN◆data◆encommon◆templates◆」にドロップして、共通イベントテンプレートにすることもできる。
+- フォルダ内の任意のBMP画像を複製して、エクスポートしたファイルと全く同じ名前にリネームする（代わりにBMPファイルとして）。必要であれば、画像編集ソフトで自由に編集してください。
+- Bakinを起動し、イベントパレットの下にある "Event "フォルダを見つけます。
+- マップ上に配置し、お好みでプロパティを記入してください。テンプレートが正しく動作しているか、もう一度編集して（マップ上に配置したオブジェクトを2回クリック）、カスタムイベントに変換し、設定した値が正しく更新されているか確認してください。
 
 # Supported Event Types
 ### How to use Keywords
