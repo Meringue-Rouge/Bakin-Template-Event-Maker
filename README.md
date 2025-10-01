@@ -20,6 +20,7 @@ Some kinds of use cases that work well include treasure chests, doors, and anyth
 宝箱やドアなど、マップ単位でパラメータを渡す必要があるものであれば、どんなものでもよい。
 
 # How to use the website / ウェブサイトの利用方法
+## EN
 
 - For most cases, add a Note (a comment) event just above the event you want to use as a parameter in your event template. The format is generally `#keyword`, and using the same keyword multiple times in the same object will only create a single field in the event template.
 - Export the object events into a TXT, by clicking the button in the top-right.
@@ -31,6 +32,7 @@ Some kinds of use cases that work well include treasure chests, doors, and anyth
 - Launch Bakin, and then find a "Event" folder under the event palette.
 - Place on map, fill in some properties to your liking. Double-check the template is working properly by editing it again (click on the object placed on the map twice), and convert it into a custom event, and check that the values you set were properly updated.
 
+## JP
 - ほとんどの場合、イベントテンプレートのパラメータとして使用したいイベントのすぐ上に Note（コメント）イベントを追加します。書式は一般的に`#keyword`で、同じオブジェクトの中で同じキーワードを複数回使用しても、イベントテンプレートのフィールドは1つしか作成されません。
 - 右上のボタンをクリックして、オブジェクトイベントをTXTにエクスポートします。
 - TXTをウェブツールにロードします。
