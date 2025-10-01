@@ -44,6 +44,7 @@ Some kinds of use cases that work well include treasure chests, doors, and anyth
 - マップ上に配置し、お好みでプロパティを記入してください。テンプレートが正しく動作しているか、もう一度編集して（マップ上に配置したオブジェクトを2回クリック）、カスタムイベントに変換し、設定した値が正しく更新されているか確認してください。
 
 # Supported Event Types
+## EN
 ### How to use Keywords
 These events can have a "note" event placed just over the event you want to be able to change through the UI in Bakin. The format of the note must be `#keyword`, with `keyword` being any word you want that you can understand (like a variable of sorts). *This will only apply to the event immediately under it.*
 
@@ -52,19 +53,29 @@ Using **unique keywords** (no two keywords are the same) throughout an event wil
 Using the **exact same keyword multiple times** throughout an event and it's sheets will only result in **one template UI** object, but will apply to all the events concerned. Don't share the same keyword for events with different subject matters (it's fine to use the same keyword for an Increase/Decrease Item event and a Check Items Possessed event, but you can't use that same keyword for a teleport event).
 
 
-## Items
+## JP
+### キーワードの使い方
+これらのイベントには、BakinのUIから変更したいイベントのすぐ上に "note "イベントを置くことができます。noteのフォーマットは`#keyword`で、`keyword`はあなたが理解できる任意の単語（変数のようなもの）です。*これはその直下のイベントにのみ適用されます。
+
+イベント全体で**ユニークなキーワード**（2つとして同じキーワードはありません）を使用すると、**キーワード**ごとにテンプレートUIオブジェクトが作成されます。
+
+イベントとそのシート全体を通して、**全く同じキーワードを複数回**使用すると、**1つのテンプレートUI**オブジェクトにしかなりませんが、関係するすべてのイベントに適用されます。異なる主題を持つイベントに同じキーワードを共有しないでください（アイテムの増減イベントと所持アイテムのチェックイベントに同じキーワードを使用することは問題ありませんが、テレポートイベントに同じキーワードを使用することはできません）。
+
+## Items / アイテム
 - [X] **Increase/Decrease Item / アイテムを増やす／減らす**
 - [X] **Check Items Possessed / 持っているアイテムの確認**
 
 ![Capture d'écran 2025-04-14 122216-small](https://github.com/user-attachments/assets/b80c5f90-c7b8-4159-ba87-41bb42e28d37)
 
-> [!TIP]
-> The exact items that you specify when they have a #keyword do not matter, as they are replaced by the template's selection, so long as the #keywords you use make sense logically.
-
 **Usage**: Create a note just over each event that you want a template for, in the format of ``#keyword``, with keyword being a word of your choice.
+
+**使い方**： 使用方法**: テンプレートが必要な各イベントのすぐ上に、``#keyword``の形式でメモを作成します。
 
 > ***If you are only checking for a single type of item, then using the same keyword for different events will only result in one template entry on the UI.
 > Ex: Use the same note keyword over both a Check Items Possessed Event and the Increase/Decrease Item event to check if the player has the item in question before giving said item.***
+> 
+> ***アイテムの種類を1つだけチェックする場合、異なるイベントに同じキーワードを使用すると、UI上のテンプレート項目は1つになります。
+> 例: アイテムを渡す前に、プレイヤーがアイテムを持っているかどうかをチェックするために、アイテム所持チェックイベントとアイテム増減イベントの両方で同じノートキーワードを使用します。***
 
 ## Switches
 - [X] **Event Switch On/Off / イベントスイッチのON/OFF**
